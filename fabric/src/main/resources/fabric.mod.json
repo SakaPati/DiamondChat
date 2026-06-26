@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "diamondchat",
+  "version": "${version}",
+  "name": "DiamondChat",
+  "description": "",
+  "authors": [
+    "Fozeton"
+  ],
+  "contact": {
+    "homepage": ""
+  },
+  "license": "GPL-3.0",
+  "icon": "assets/diamondchat/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "ru.fozeton.diamondchat.fabric.DiamondchatFabric"
+    ],
+    "client": [
+      "ru.fozeton.diamondchat.fabric.client.DiamondchatFabricClient"
+    ]
+  },
+  "mixins": [
+    "diamondchat.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.17.2",
+    "minecraft": "~1.21.4",
+    "java": ">=21",
+    "architectury": ">=15.0.3",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
+}
