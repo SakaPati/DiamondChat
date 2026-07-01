@@ -1,4 +1,4 @@
-package ru.fozeton.diamondchat.chat.widgets;
+package ru.fozeton.diamondchat.gui.widgets;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -11,7 +11,7 @@ public class SearchEditBox extends EditBox {
 
     public SearchEditBox(Font font, int x, int y, int width, int height, Component message) {
         super(font, x, y, width, height, message);
-        this.setBordered(false); // Отключаем ванильную обводку
+        this.setBordered(false);
         this.setTextColor(0x3f3f46);
     }
 
@@ -32,10 +32,13 @@ public class SearchEditBox extends EditBox {
 
     @Override
     public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Отрисовка кастомной обводки и фона
-        graphics.fill(getX() - 1, getY() - 1, getX() + this.width + 1, getY() + this.height + 1, 0xFF3f3f46); // Border
-        graphics.fill(getX(), getY(), getX() + this.width, getY() + this.height, 0xFF09090b); // Background
+        graphics.fill(getX() - 1, getY() - 1, getX() + this.width + 1, getY() + this.height + 1, 0xFF3f3f46);
+        graphics.fill(getX(), getY(), getX() + this.width, getY() + this.height, 0xFF09090b);
 
-        super.renderWidget(graphics, mouseX, mouseY, partialTick); // Рисует сам текст EditBox'а
+        int textOffsetY = (this.height - 8) / 2;
+        graphics.pose().pushPose();
+        graphics.pose().translate(2, textOffsetY, 0);
+        super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        graphics.pose().popPose();
     }
 }

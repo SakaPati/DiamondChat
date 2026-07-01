@@ -1,4 +1,4 @@
-package ru.fozeton.diamondchat.chat.widgets;
+package ru.fozeton.diamondchat.gui.widgets;
 
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
@@ -14,6 +14,7 @@ import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.messages.Message;
+import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.diamondchat.chat.utils.channel.MessageColorRemapper;
 import ru.fozeton.diamondchat.utils.notify.Notification;
 
@@ -90,8 +91,8 @@ public class ChatHistoryWidget extends AbstractWidget {
                 if (metadata.get("lineColor") instanceof String s) backgroundColor = Long.decode(s).intValue();
                 if (metadata.get("borderColor") instanceof String s) baseStripe = Long.decode(s).intValue();
 
-                int finalBg = message.isMentioned() ? blinkHex : backgroundColor;
-                int finalStripe = message.isMentioned() ? 0xFFc4a020 : baseStripe;
+                int finalBg = message.getType() == MessageType.MENTIONED ? blinkHex : backgroundColor;
+                int finalStripe = message.getType() == MessageType.MENTIONED ? 0xFFc4a020 : baseStripe;
 
                 if (remapColors) {
                     finalBg = colorRemapper.applyAlpha(finalBg, 128);

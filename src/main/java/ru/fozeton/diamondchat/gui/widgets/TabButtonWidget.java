@@ -1,9 +1,9 @@
-package ru.fozeton.diamondchat.widgets;
+package ru.fozeton.diamondchat.gui.widgets;
 
 import lombok.Setter;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 
 public class TabButtonWidget extends AbstractWidget {

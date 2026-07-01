@@ -66,20 +66,25 @@ public class Handler extends MessageHandlingChannel {
     @Override
     protected void onPostProcess(Message message) {
         boolean handled = false;
+        Map<String, ChatChannel> channels = ChatManagerCore.getChannels();
         for (MessageHandler handler : getHandlers()) {
-            if (handler instanceof ChannelHandler) {
+            if (handler instanceof ChannelHandler channelHandler) {
                 if (handler.action(message)) {
                     log.debug("Сообщение успешно распределено в канал.");
                     handled = true;
+                    ChatChannel channel = channels.get(channelHandler.getChannelId());
+                    if (channel != null) message.setChannel(channel);
                     break;
                 }
             }
         }
 
         if (!handled) {
-            log.debug("Канал для сообщения не найден. Отправка в канал по умолчанию.");
-            ChatChannel defaultChannel = ChatManagerCore.getChannels().get("Default");
-            if (defaultChannel != null) defaultChannel.addMessage(message);
+            ChatChannel defaultChannel = channels.get("Default");
+            if (defaultChannel != null) {
+                message.setChannel(defaultChannel);
+                defaultChannel.addMessage(message);
+            }
             else log.error("Канал 'Default' не найден в ChatManagerCore!");
         }
     }

@@ -1,6 +1,7 @@
 package ru.fozeton.diamondchat.configs;
 
 import lombok.Getter;
+import ru.fozeton.chatmanager.config.AiStyleTextConfig;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.utils.Logger;
@@ -15,6 +16,8 @@ public class ConfigLoader {
     private ChannelsConfig channelsConfig;
     @Getter
     private MessagesFilterConfig messagesFilterConfig;
+    @Getter
+    private AiStyleTextConfig textStyle;
 
     public void loaded() {
         channelsConfig = manager.load(ChannelsConfig.class);
@@ -29,6 +32,12 @@ public class ConfigLoader {
             log.info("Создание дефолтной конфигурации фильтров сообщений");
             messagesFilterConfig = MessagesFilterConfig.createDefault();
             manager.save(messagesFilterConfig);
+        }
+        textStyle = manager.load(AiStyleTextConfig.class);
+        if (textStyle == null || textStyle.getStyles() == null || textStyle.getStyles().isEmpty()) {
+            log.info("Создание дефолтной конфигурации фильтров сообщений");
+            textStyle = new TextStyle().createDefault();
+            manager.save(textStyle);
         }
     }
 }

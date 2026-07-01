@@ -1,11 +1,7 @@
 package ru.fozeton.diamondchat.configs;
 
-import lombok.Getter;
-import lombok.Setter;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 
-@Getter
-@Setter
 public class ChatChannelsConfig extends ChannelsConfig {
     @Override
     public ChannelsConfig createDefault() {
@@ -46,10 +42,20 @@ public class ChatChannelsConfig extends ChannelsConfig {
         localSettings.setWidth(400);
         localSettings.setHeight(200);
 
+        ChannelSettings tradeSettings = new ChannelSettings();
+        tradeSettings.setId("Trade");
+        tradeSettings.setName("Торговый чат");
+        tradeSettings.setPattern("^Ⓜ");
+        tradeSettings.setX(250);
+        tradeSettings.setY(360);
+        tradeSettings.setWidth(400);
+        tradeSettings.setHeight(200);
+
         config.getChannels().put("Default", defaultSettings);
         config.getChannels().put("Private", privateSettings);
         config.getChannels().put("Clan", clanSettings);
         config.getChannels().put("Local", localSettings);
+        config.getChannels().put("Trade", tradeSettings);
 
         return config;
     }

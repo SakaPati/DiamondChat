@@ -1,6 +1,7 @@
 package ru.fozeton.diamondchat.chat.handlers;
 
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.messages.Message;
@@ -8,6 +9,7 @@ import ru.fozeton.chatmanager.messages.MessageHandler;
 
 import java.util.regex.Pattern;
 
+@Getter
 @RequiredArgsConstructor
 public class ChannelHandler implements MessageHandler {
     private final Pattern pattern;

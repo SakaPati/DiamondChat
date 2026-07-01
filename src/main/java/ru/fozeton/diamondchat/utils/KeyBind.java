@@ -10,7 +10,7 @@ import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.events.InputEvent;
-import ru.fozeton.diamondchat.chat.ChatLogScreen;
+import ru.fozeton.diamondchat.gui.ChatLogScreen;
 
 public class KeyBind {
     @Getter
@@ -23,10 +23,10 @@ public class KeyBind {
 
     public void register() {
         openGui = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.diamondchat.open_gui",
+                "Открыть историю чата",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_I,
-                "key.categories.diamondchat"
+                "DiamondChat"
         ));
     }
 

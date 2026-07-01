@@ -1,4 +1,4 @@
-package ru.fozeton.diamondchat.widgets;
+package ru.fozeton.diamondchat.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -6,6 +6,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.fozeton.chatmanager.config.MacrosConfig;
 import ru.fozeton.diamondchat.utils.MacroManager;
+import ru.fozeton.diamondchat.gui.widgets.SimpleButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +15,12 @@ public class MacrosScreen extends Screen {
     private static final int GUI_W = 370;
     private static final int GUI_H = 400;
     private static final int PAD = 10;
-    private static final int MACRO_W = 210;
+    private static final int MACRO_W = 200;
     private static final int TIMER_W = 65;
     private static final int DEL_W = 28;
     private static final int ROW_H = 20;
     private static final int ROW_GAP = 4;
-    private static final int MAX_VISIBLE = 6;
+    private static final int MAX_VISIBLE = 10;
     private static final int COL_BG = 0xFF212128;
     private static final int COL_DIVIDER = 0xFF2e2e3d;
     private static final int COL_MUTED = 0xFF6b6b88;
@@ -62,9 +63,8 @@ public class MacrosScreen extends Screen {
         addRenderableWidget(intervalInput);
 
         int addX = guiX + PAD + MACRO_W + 5 + TIMER_W + 5;
-        int addW = GUI_W - PAD - (MACRO_W + 5 + TIMER_W + 5);
-        addRenderableWidget(SimpleButton.of(addX, inputY, addW, ROW_H,
-                Component.literal("+ ДОБАВИТЬ"), COL_PURPLE, btn -> addMacro()));
+        int addW = GUI_W - PAD - (MACRO_W + TIMER_W) - 20;
+        addRenderableWidget(SimpleButton.of(addX, inputY, addW, ROW_H, Component.literal("+ ДОБАВИТЬ"), COL_PURPLE, btn -> addMacro()));
 
         rebuildMacroButtons(guiX, guiY);
     }
@@ -116,6 +116,7 @@ public class MacrosScreen extends Screen {
 
         graphics.fill(guiX, guiY, guiX + GUI_W, guiY + GUI_H, COL_BG);
         graphics.renderOutline(guiX, guiY, GUI_W, GUI_H, COL_DIVIDER);
+        super.render(graphics, mouseX, mouseY, delta);
 
         graphics.drawString(font, "МАКРОСЫ", guiX + PAD, guiY + 10, COL_MUTED, false);
         graphics.fill(guiX + PAD, guiY + 22, guiX + GUI_W - PAD, guiY + 23, COL_DIVIDER);
@@ -144,11 +145,6 @@ public class MacrosScreen extends Screen {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
     }
 
     private void addMacro() {

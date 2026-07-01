@@ -39,10 +39,8 @@ public class MacroManager {
     public void onSecondElapsed(SecondElapsedEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-
         MacrosConfig cfg = getConfig();
         if (!cfg.isEnabled()) return;
-
         for (String key : new ArrayList<>(cfg.getMacros().keySet())) {
             MacrosConfig.Macros m = cfg.getMacros().get(key);
             if (m == null || !m.isActive()) {

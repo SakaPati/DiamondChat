@@ -10,7 +10,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.events.InputEvent;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.events.game.NotificationEvent;
@@ -23,8 +22,8 @@ public class NotificationManager {
     @Getter
     private static final NotificationManager instance = new NotificationManager();
 
-    private static final float titleScale = 1.6f;
-    private static final float messageScale = 1.4f;
+    private static final float titleScale = 1.4f;
+    private static final float messageScale = 1.2f;
     private static final long ANIMATION_DURATION = 150;
 
     private final List<ActiveNotification> activeNotifications = new ArrayList<>();
@@ -54,7 +53,7 @@ public class NotificationManager {
         activeNotifications.removeIf(ActiveNotification::isFullyExpired);
         if (activeNotifications.isEmpty()) return;
 
-        Font Font = client.font;
+        Font font = client.font;
 
         int windowWidth = GuiGraphics.guiWidth();
         int currentY = 10;
@@ -63,13 +62,13 @@ public class NotificationManager {
         double mouseX = client.mouseHandler.xpos() * (double) windowWidth / (double) client.getWindow().getWidth();
         double mouseY = client.mouseHandler.ypos() * (double) GuiGraphics.guiHeight() / (double) client.getWindow().getHeight();
 
-        GuiGraphics.pose().popPose();
+        GuiGraphics.pose().pushPose();
         GuiGraphics.pose().translate(0, 0, 5000f);
 
         for (ActiveNotification active : activeNotifications) {
             float animationScale = getAnimationScale(active);
 
-            RenderGeometry geo = active.calculateGeometry(Font, animationScale, windowWidth, currentY);
+            RenderGeometry geo = active.calculateGeometry(font, animationScale, windowWidth, currentY);
 
             boolean isHovered = mouseX >= geo.x() && mouseX <= (geo.x() + geo.width()) && mouseY >= geo.y() && mouseY <= (geo.y() + geo.height());
             int backgroundColor = (isHovered && active.action != null) ? 0xFF1e1e2a : 0xFF18181f;
@@ -101,16 +100,16 @@ public class NotificationManager {
             GuiGraphics.renderOutline(geo.x(), geo.y(), geo.width(), geo.height(), borderColor);
             GuiGraphics.fill(geo.x() + 1, geo.y(), geo.x() - 2, geo.y() + geo.height(), accentColor);
 
-            GuiGraphics.pose().popPose();
-            GuiGraphics.pose().translate(geo.x(), geo.y(), 0);
+            GuiGraphics.pose().pushPose();
+            GuiGraphics.pose().translate(geo.x() + 3, geo.y() + 5, 0);
             GuiGraphics.pose().scale(titleScale * animationScale, titleScale * animationScale, 1.0f);
-            GuiGraphics.drawString(Font, geo.title(), 5, 2, titleColor, false);
+            GuiGraphics.drawString(font, geo.title(), 5, 2, titleColor, false);
             GuiGraphics.pose().popPose();
 
-            GuiGraphics.pose().popPose();
-            GuiGraphics.pose().translate(geo.x(), geo.y(), 0);
+            GuiGraphics.pose().pushPose();
+            GuiGraphics.pose().translate(geo.x(), geo.y() + 5, 0);
             GuiGraphics.pose().scale(messageScale * animationScale, messageScale * animationScale, 1.0f);
-            GuiGraphics.drawString(Font, geo.message(), 8, 15, messageColor, false);
+            GuiGraphics.drawString(font, geo.message(), 8, 15, messageColor, false);
             GuiGraphics.pose().popPose();
 
             float progress = active.getProgress();

@@ -159,11 +159,7 @@ public class ChatChannelView {
         try {
             chatLines.clear();
             for (Message msg : channel.getMessages()) {
-                Component text;
-                System.out.println(settings.isUseColorRemapper());
-                if(settings.isUseColorRemapper()) {
-                    text = colorRemapper.remap(msg.getContent());
-                } else text = msg.getContent();
+                Component text = settings.isUseColorRemapper() ? colorRemapper.remap(msg.getContent()) : msg.getContent();
                 msg.getMetadata().put("channelId", event.getChannel().getId());
                 chatLines.add(new ChatChannelView.ChatLine(renderer.split(text, viewWidth), msg, msg.getTimestamp()));
             }

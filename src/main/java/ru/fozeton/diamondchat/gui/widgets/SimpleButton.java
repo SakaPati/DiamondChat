@@ -1,4 +1,4 @@
-package ru.fozeton.diamondchat.widgets;
+package ru.fozeton.diamondchat.gui.widgets;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;

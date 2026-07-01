@@ -3,7 +3,6 @@ package ru.fozeton.diamondchat.chat.utils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket;
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
-//import ru.dargen.evoplus.api.EvoPlusApi;
 import ru.dargen.evoplus.api.EvoPlusApi;
 import ru.fozeton.chatmanager.messages.ChatMessageParser;
 import ru.fozeton.chatmanager.messages.Message;

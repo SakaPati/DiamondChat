@@ -52,7 +52,7 @@ public class ChatChannelEditOverlay {
         int vh = geometry.getViewHeight();
         int markSize = settings.getEditMode().getMarkSize();
 
-        context.renderOutline(x - 8, y, vw + 8, vh -2, 0xFF7c6ef5);
+        context.renderOutline(x - 8, y, vw + 8, vh - 2, 0xFF7c6ef5);
 
         boolean cornerTL = isNearTopLeftCorner(mouseX, mouseY);
         boolean cornerTR = isNearTopRightCorner(mouseX, mouseY);
@@ -151,7 +151,7 @@ public class ChatChannelEditOverlay {
     }
 
     private void renderHandle(GuiGraphics ctx, int x, int y, int w, int h, boolean hovered) {
-        ctx.fill(x, y, x + w, y + h, hovered ? settings.getEditMode().getMarkHover() : settings.getEditMode().getMarkColor());
+        ctx.fill(x, y, x + w, y + h, hovered ? Long.decode(settings.getEditMode().getMarkHover()).intValue() : Long.decode(settings.getEditMode().getMarkColor()).intValue());
         ctx.renderOutline(x, y, w, h, 0xFF3a2f8a);
     }
 

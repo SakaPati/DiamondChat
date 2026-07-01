@@ -27,7 +27,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     compileOnly("org.projectlombok:lombok:1.18.46")
     annotationProcessor("org.projectlombok:lombok:1.18.46")
-    modImplementation include("com.ferra13671:mega-events:1.7.1")
+    implementation "com.ferra13671:mega-events:1.7.1"
+    include "com.ferra13671:mega-events:1.7.1"
     modImplementation files("libs/chatmanager_core-fabric-1.0-SNAPSHOT.jar")
     modImplementation "com.github.evo-plus:evo-plus-api:1.0.11"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"

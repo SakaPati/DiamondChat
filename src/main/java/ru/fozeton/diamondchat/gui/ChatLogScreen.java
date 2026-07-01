@@ -1,13 +1,13 @@
-package ru.fozeton.diamondchat.chat;
+package ru.fozeton.diamondchat.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
-import ru.fozeton.diamondchat.chat.widgets.ChannelButton;
-import ru.fozeton.diamondchat.chat.widgets.ChatHistoryWidget;
-import ru.fozeton.diamondchat.chat.widgets.SearchEditBox;
+import ru.fozeton.diamondchat.gui.widgets.ChannelButton;
+import ru.fozeton.diamondchat.gui.widgets.ChatHistoryWidget;
+import ru.fozeton.diamondchat.gui.widgets.SearchEditBox;
 
 import java.util.Map;
 import java.util.Objects;
@@ -53,8 +53,8 @@ public class ChatLogScreen extends Screen {
             xPadding += 130;
         }
 
-        int inputWidth = 120;
-        int margin = 14;
+        int inputWidth = 100;
+        int margin = 25;
         SearchEditBox searchBox = new SearchEditBox(this.font, this.width - inputWidth - margin, 20, inputWidth, 20, Component.literal("Поиск"));
         searchBox.setOnEnter(() -> {
             this.currentSearchQuery = searchBox.getValue();

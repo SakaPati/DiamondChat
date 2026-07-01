@@ -11,6 +11,7 @@ import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.PlayerMentionedEvent;
 import ru.fozeton.chatmanager.messages.Message;
+import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.chatmanager.utils.PlaySounds;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;
@@ -128,8 +129,8 @@ public class ChatChannelMessageHandler {
 
                     if (currentY < y || (renderedLinesCount > maxVisible && !isChatOpen)) break;
 
-                    int fadedBg = colorRemapper.applyAlpha(chatLine.message().isMentioned() ? blinkHex : backgroundColor, currentBgAlpha);
-                    int fadedStripe = colorRemapper.applyAlpha(chatLine.message().isMentioned() ? 0xFFc4a020 : stripeColor, currentStripeAlpha);
+                    int fadedBg = colorRemapper.applyAlpha(chatLine.message().getType() == MessageType.MENTIONED ? blinkHex : backgroundColor, currentBgAlpha);
+                    int fadedStripe = colorRemapper.applyAlpha(chatLine.message().getType() == MessageType.MENTIONED ? 0xFFc4a020 : stripeColor, currentStripeAlpha);
                     int fadedText = colorRemapper.applyAlpha(0xFFFFFFFF, alphaInt);
 
                     context.fill(x - 5, currentY - 3, x + viewWidth, currentY + renderer.lineHeight, fadedBg);
