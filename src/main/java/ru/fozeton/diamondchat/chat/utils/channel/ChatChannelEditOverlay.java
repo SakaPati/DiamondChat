@@ -41,6 +41,7 @@ public class ChatChannelEditOverlay {
     }
 
     public void render(GuiGraphics context, Font renderer, int mouseX, int mouseY, boolean isChatOpen) {
+
         lastMouseX = mouseX;
         lastMouseY = mouseY;
 

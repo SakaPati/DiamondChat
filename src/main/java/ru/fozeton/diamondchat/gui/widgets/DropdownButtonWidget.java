@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class DropdownButtonWidget extends AbstractWidget {
     private static final int BG = 0xFF18181F;
@@ -20,19 +21,28 @@ public class DropdownButtonWidget extends AbstractWidget {
     private static final int TEXT_INACTIVE = 0xFF6B6B88;
     private static final int BORDER_HOVER = 0xFF5A4A9E;
     private static final int TEXT_HOVER = 0xFF8878CC;
-    private static final int ITEM_TEXT = 0xFFCCCCDD;
     private static final int ITEM_TEXT_HOVER = 0xFFA78BFA;
+    private static final int ITEM_TEXT_ACTIVE = 0xFFA78BFA;
+    private static final int ITEM_TEXT_INACTIVE = 0xFF6B6B88;
     private static final int ITEM_HEIGHT = 13;
     private static final int ITEM_PADDING_X = 6;
+    private static final int ACTIVE_DOT = 0xFF7C6EF5;
+    private static final int INACTIVE_DOT = 0xFF3A2E6E;
+
     private final List<DropdownItem> items = new ArrayList<>();
     @Getter
     private boolean open = false;
+
     public DropdownButtonWidget(int x, int y, int width, int height, Component label) {
         super(x, y, width, height, label);
     }
 
     public void addItem(String label, Runnable action) {
-        items.add(new DropdownItem(label, action));
+        items.add(new DropdownItem(label, action, () -> false));
+    }
+
+    public void addItem(String label, Runnable action, Supplier<Boolean> activeState) {
+        items.add(new DropdownItem(label, action, activeState));
     }
 
     @Override
@@ -89,6 +99,7 @@ public class DropdownButtonWidget extends AbstractWidget {
             for (int i = 0; i < items.size(); i++) {
                 int iy = startY + i * ITEM_HEIGHT;
                 boolean itemHovered = mouseX >= getX() && mouseX <= getX() + iw && mouseY >= iy && mouseY <= iy + ITEM_HEIGHT;
+                boolean itemActive = items.get(i).activeState().get();
 
                 if (itemHovered) {
                     graphics.fill(getX() + 1, iy, getX() + iw - 1, iy + ITEM_HEIGHT, BG_ITEM_HOVER);
@@ -96,9 +107,13 @@ public class DropdownButtonWidget extends AbstractWidget {
                     graphics.fill(getX() + 1, iy, getX() + iw - 1, iy + ITEM_HEIGHT, BG_ITEM);
                 }
 
-                int color = itemHovered ? ITEM_TEXT_HOVER : ITEM_TEXT;
+                int dotColor = itemActive ? ACTIVE_DOT : INACTIVE_DOT;
+                int dotY = iy + ITEM_HEIGHT / 2;
+                graphics.fill(getX() + 4, dotY - 1, getX() + 6, dotY + 1, dotColor);
+
+                int color = itemHovered ? ITEM_TEXT_HOVER : itemActive ? ITEM_TEXT_ACTIVE : ITEM_TEXT_INACTIVE;
                 graphics.drawString(font, items.get(i).label(),
-                        getX() + ITEM_PADDING_X,
+                        getX() + ITEM_PADDING_X + 4,
                         iy + (ITEM_HEIGHT - 8) / 2,
                         color, false);
             }
@@ -109,7 +124,7 @@ public class DropdownButtonWidget extends AbstractWidget {
         var font = Minecraft.getInstance().font;
         int maxW = width;
         for (var item : items) {
-            maxW = Math.max(maxW, font.width(item.label()) + ITEM_PADDING_X * 2);
+            maxW = Math.max(maxW, font.width(item.label()) + ITEM_PADDING_X * 2 + 4);
         }
         return maxW;
     }
@@ -123,6 +138,6 @@ public class DropdownButtonWidget extends AbstractWidget {
         this.defaultButtonNarrationText(output);
     }
 
-    public record DropdownItem(String label, Runnable action) {
+    public record DropdownItem(String label, Runnable action, Supplier<Boolean> activeState) {
     }
 }

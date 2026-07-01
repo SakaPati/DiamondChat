@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ChatHistoryWidget extends AbstractWidget {
     private static final int BAR_W = 4;
     private static final int COL_TRACK = 0xFF2e2e3d;
-    private static final int COL_THUMB = 0xFF7c6ef5;
     private static final int COL_THUMB_HOV = 0xFFa78bfa;
     private static final int COL_THUMB_DARK = 0xFF5b50c4;
 
@@ -85,7 +84,7 @@ public class ChatHistoryWidget extends AbstractWidget {
                     default -> 0xFF7c6ef5;
                 };
 
-                int backgroundColor = 0x80000000;
+                int backgroundColor = Long.decode(settings.getHistoryChat().getBackgroundColor()).intValue();
                 Map<String, Object> metadata = message.getMetadata();
 
                 if (metadata.get("lineColor") instanceof String s) backgroundColor = Long.decode(s).intValue();
@@ -108,9 +107,7 @@ public class ChatHistoryWidget extends AbstractWidget {
 
     private boolean matchesFilter(Message message, String channelId, String query) {
         if (channelId != null && !channelId.equals(message.getMetadata().get("channelId"))) return false;
-        if (query != null && !query.isEmpty() && !message.getPlainText().toLowerCase().contains(query.toLowerCase()))
-            return false;
-        return true;
+        return query == null || query.isEmpty() || message.getPlainText().toLowerCase().contains(query.toLowerCase());
     }
 
     private void scrollToBottom() {
@@ -183,7 +180,7 @@ public class ChatHistoryWidget extends AbstractWidget {
         boolean hov = isHoveringScrollbar || dragging;
 
         graphics.fill(trackX - 1, thumbY, trackX + BAR_W + 1, thumbY + thumbH, COL_THUMB_DARK);
-        graphics.fill(trackX, thumbY + 1, trackX + BAR_W, thumbY + thumbH - 1, hov ? COL_THUMB_HOV : COL_THUMB);
+        graphics.fill(trackX, thumbY + 1, trackX + BAR_W, thumbY + thumbH - 1, hov ? COL_THUMB_HOV : Long.decode(settings.getHistoryChat().getScrollColor()).intValue());
     }
 
     @Override

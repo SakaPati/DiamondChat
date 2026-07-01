@@ -19,10 +19,6 @@ public class ChannelHandler implements MessageHandler {
     @Override
     public boolean action(Message message) {
         if(action != null) action.run();
-        if (pattern.matcher(message.getPlainText()).find()) {
-            ChatManagerCore.getChannels().get(channelId).addMessage(message);
-            return true;
-        }
-        return false;
+        return pattern.matcher(message.getPlainText()).find();
     }
 }

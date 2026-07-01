@@ -2,6 +2,7 @@ package ru.fozeton.diamondchat.configs;
 
 import lombok.Getter;
 import ru.fozeton.chatmanager.config.AiStyleTextConfig;
+import ru.fozeton.chatmanager.config.AliasConfig;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.utils.Logger;
@@ -18,26 +19,26 @@ public class ConfigLoader {
     private MessagesFilterConfig messagesFilterConfig;
     @Getter
     private AiStyleTextConfig textStyle;
+    @Getter
+    private AliasConfig aliasConfig;
+    @Getter
+    private ColorRemapperConfig remapperConfig;
 
     public void loaded() {
-        channelsConfig = manager.load(ChannelsConfig.class);
-        if (channelsConfig == null || channelsConfig.getChannels() == null || channelsConfig.getChannels().isEmpty()) {
-            log.info("Создание дефолтной конфигурации чатов");
-            channelsConfig = new ChatChannelsConfig().createDefault();
-            manager.save(channelsConfig);
-        }
+        channelsConfig = loadOrCreateDefault(ChannelsConfig.class, new ChatChannelsConfig(), "чатов");
+        messagesFilterConfig = loadOrCreateDefault(MessagesFilterConfig.class, new MessagesFilterConfig(), "фильтров сообщений");
+        textStyle = loadOrCreateDefault(AiStyleTextConfig.class, new TextStyle(), "стилей сообщений");
+        aliasConfig = loadOrCreateDefault(AliasConfig.class, new AliasesConfig(), "алиасов сообщений");
+        remapperConfig = loadOrCreateDefault(ColorRemapperConfig.class, new ColorRemapperConfig(), "ремаппера цветов");
+    }
 
-        messagesFilterConfig = manager.load(MessagesFilterConfig.class);
-        if (messagesFilterConfig == null || messagesFilterConfig.getFilters() == null || messagesFilterConfig.getFilters().isEmpty()) {
-            log.info("Создание дефолтной конфигурации фильтров сообщений");
-            messagesFilterConfig = MessagesFilterConfig.createDefault();
-            manager.save(messagesFilterConfig);
+    private <T> T loadOrCreateDefault(Class<T> clazz, Config<T> factory, String logMessage) {
+        T config = manager.load(clazz);
+        if (config == null || factory.isEmpty(config)) {
+            log.info("Создание дефолтной конфигурации " + logMessage);
+            config = factory.createDefault();
+            manager.save(config);
         }
-        textStyle = manager.load(AiStyleTextConfig.class);
-        if (textStyle == null || textStyle.getStyles() == null || textStyle.getStyles().isEmpty()) {
-            log.info("Создание дефолтной конфигурации фильтров сообщений");
-            textStyle = new TextStyle().createDefault();
-            manager.save(textStyle);
-        }
+        return config;
     }
 }

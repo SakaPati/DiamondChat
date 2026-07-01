@@ -9,10 +9,11 @@ import java.util.List;
 
 @Getter
 @Setter
-public class MessagesFilterConfig {
+public class MessagesFilterConfig implements Config<MessagesFilterConfig>{
     private final List<MessageFilter> filters = new LinkedList<>();
 
-    public static MessagesFilterConfig createDefault() {
+    @Override
+    public MessagesFilterConfig createDefault() {
         MessagesFilterConfig config = new MessagesFilterConfig();
 
         MessageFilter plainTextFilter = new MessageFilter(
@@ -38,6 +39,11 @@ public class MessagesFilterConfig {
         config.getFilters().add(advancedFilter);
 
         return config;
+    }
+
+    @Override
+    public boolean isEmpty(MessagesFilterConfig config) {
+        return config == null || config.getFilters() == null || config.getFilters().isEmpty();
     }
 
     @Getter

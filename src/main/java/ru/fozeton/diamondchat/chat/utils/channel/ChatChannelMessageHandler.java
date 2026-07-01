@@ -18,6 +18,7 @@ import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -26,9 +27,8 @@ public class ChatChannelMessageHandler {
     private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
     private final PlaySounds sounds = PlaySounds.getInstance();
     private final ChatChannel channel;
-    private final ChannelsConfig config;
     private final ChannelsConfig.ChannelSettings settings;
-    private final List<ChatChannelView.ChatLine> chatLines;
+    private final Collection<ChatChannelView.ChatLine> chatLines;
     private final ChatChannelDragHandler dragHandler;
     private final ChatChannelGeometry geometry;
     private final ReadWriteLock lock;
@@ -41,7 +41,7 @@ public class ChatChannelMessageHandler {
     public ChatChannelMessageHandler(
             ChatChannel channel,
             ChannelsConfig config,
-            List<ChatChannelView.ChatLine> chatLines,
+            Collection<ChatChannelView.ChatLine> chatLines,
             ChatChannelDragHandler dragHandler,
             ChatChannelGeometry geometry,
             ReadWriteLock lock,
@@ -49,7 +49,6 @@ public class ChatChannelMessageHandler {
     ) {
         this.channel = channel;
         this.settings = config.getChannels().get(channel.getId());
-        this.config = config;
         this.chatLines = chatLines;
         this.dragHandler = dragHandler;
         this.geometry = geometry;
@@ -61,6 +60,8 @@ public class ChatChannelMessageHandler {
     }
 
     public void render(GuiGraphics context, int mouseX, int mouseY, Font renderer, boolean isChatOpen) {
+        if (!settings.isVisible()) return;
+
         int x = geometry.getX();
         int y = geometry.getY();
         int viewWidth = geometry.getViewWidth();
@@ -110,11 +111,7 @@ public class ChatChannelMessageHandler {
                     else if (age > fadeStartMs) alpha = 1.0f - (float) (age - fadeStartMs) / fadeDurationMs;
                 }
 
-                int alphaInt = (int) (alpha * 255) & 0xFF;
-                if (!isChatOpen && alphaInt <= 3) break;
-
-                int currentBgAlpha = (int) (alpha * config.getLineBackgroundAlpha());
-                int currentStripeAlpha = (int) (alpha * config.getStripBackgroundAlpha());
+                if (!isChatOpen && alpha <= 0.118f) break;
 
                 for (int j = lines.size() - 1; j >= 0; j--) {
                     FormattedCharSequence text = lines.get(j);
@@ -129,9 +126,12 @@ public class ChatChannelMessageHandler {
 
                     if (currentY < y || (renderedLinesCount > maxVisible && !isChatOpen)) break;
 
-                    int fadedBg = colorRemapper.applyAlpha(chatLine.message().getType() == MessageType.MENTIONED ? blinkHex : backgroundColor, currentBgAlpha);
-                    int fadedStripe = colorRemapper.applyAlpha(chatLine.message().getType() == MessageType.MENTIONED ? 0xFFc4a020 : stripeColor, currentStripeAlpha);
-                    int fadedText = colorRemapper.applyAlpha(0xFFFFFFFF, alphaInt);
+                    int currentBg = chatLine.message().getType() == MessageType.MENTIONED ? blinkHex : backgroundColor;
+                    int currentStripe = chatLine.message().getType() == MessageType.MENTIONED ? 0xFFc4a020 : stripeColor;
+
+                    int fadedBg = colorRemapper.applyAlpha(currentBg, alpha);
+                    int fadedStripe = colorRemapper.applyAlpha(currentStripe, alpha);
+                    int fadedText = colorRemapper.applyAlpha(0xFFFFFFFF, alpha);
 
                     context.fill(x - 5, currentY - 3, x + viewWidth, currentY + renderer.lineHeight, fadedBg);
                     context.fill(x - 5, currentY - 3, x - 7, currentY + renderer.lineHeight, fadedStripe);

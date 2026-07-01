@@ -5,34 +5,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import ru.fozeton.chatmanager.config.ChatConfigManager;
+import ru.fozeton.diamondchat.configs.ColorRemapperConfig;
+import ru.fozeton.diamondchat.configs.ConfigLoader;
 
 import java.util.Map;
 
 public class MessageColorRemapper {
     @Getter
     private static final MessageColorRemapper instance = new MessageColorRemapper();
-
-    private static final float CUSTOM_SATURATION = 0.65f;
-    private static final float CUSTOM_BRIGHTNESS = 0.75f;
-
-    private static final Map<Integer, Integer> VANILLA_REMAP = Map.ofEntries(
-            Map.entry(0x000000, 0xFF2C2C3A),
-            Map.entry(0x0000AA, 0xFF3A4A8A),
-            Map.entry(0x00AA00, 0xFF1D7A52),
-            Map.entry(0x00AAAA, 0xFF2A8A8A),
-            Map.entry(0xAA0000, 0xFF8A2030),
-            Map.entry(0xAA00AA, 0xFF5A3A8A),
-            Map.entry(0xFFAA00, 0xFFC4A020),
-            Map.entry(0xAAAAAA, 0xFF6B6B88),
-            Map.entry(0x555555, 0xFF4A4A62),
-            Map.entry(0x5555FF, 0xFF6A6AE0),
-            Map.entry(0x55FF55, 0xFF2AAA72),
-            Map.entry(0x55FFFF, 0xFF7ABFCC),
-            Map.entry(0xFF5555, 0xFFC04060),
-            Map.entry(0xFF55FF, 0xFFB07ACC),
-            Map.entry(0xFFFF55, 0xFFCFB84A),
-            Map.entry(0xFFFFFF, 0xFFD4D0F5)
-    );
+    private final ColorRemapperConfig remapperConfig = ConfigLoader.getInstance().getRemapperConfig();
 
     public Component remap(Component original) {
         return remapRecursive(original.copy());
@@ -44,14 +26,10 @@ public class MessageColorRemapper {
         if (style.getColor() != null) {
             int rgb = style.getColor().getValue();
 
-            int newRgb;
-            Integer vanilla = VANILLA_REMAP.get(rgb);
-            if (vanilla != null) newRgb = vanilla & 0xFFFFFF;
-            else newRgb = muteColor(rgb);
+            Integer vanilla = remapperConfig.getRemapColor(rgb);
+            int newRgb = (vanilla != null) ? (vanilla & 0xFFFFFF) : muteColor(rgb);
 
-            text.setStyle(style.withColor(
-                    TextColor.fromRgb(newRgb)
-            ));
+            text.setStyle(style.withColor(TextColor.fromRgb(newRgb)));
         }
 
         text.getSiblings().replaceAll(text1 -> remapRecursive(text1.copy()));
@@ -66,8 +44,8 @@ public class MessageColorRemapper {
 
         float[] hsb = rgbToHsb(r, g, b);
 
-        hsb[1] *= CUSTOM_SATURATION;
-        hsb[2] *= CUSTOM_BRIGHTNESS;
+        hsb[1] *= remapperConfig.getSaturation();
+        hsb[2] *= remapperConfig.getBrightness();
 
         hsb[2] = Math.max(hsb[2], 0.45f);
 
@@ -140,7 +118,14 @@ public class MessageColorRemapper {
         return ((int) (r * 255) << 16) | ((int) (g * 255) << 8) | (int) (bl * 255);
     }
 
-    public int applyAlpha(int argb, int alpha) {
-        return (argb & 0x00FFFFFF) | (alpha << 24);
+    public int applyAlpha(int argb, float fadeAlpha) {
+        int nativeAlpha = (argb >> 24) & 0xFF;
+        if (nativeAlpha == 0 && (argb & 0xFF000000) == 0) {
+            nativeAlpha = 0xFF;
+        }
+
+        int finalAlpha = (int) (nativeAlpha * fadeAlpha) & 0xFF;
+
+        return (argb & 0x00FFFFFF) | (finalAlpha << 24);
     }
 }

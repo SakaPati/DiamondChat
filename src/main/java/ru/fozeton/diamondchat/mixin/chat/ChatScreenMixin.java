@@ -15,16 +15,21 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import ru.fozeton.chatmanager.ChatManagerCore;
+import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.AiStyleTextConfig;
+import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.config.MacrosConfig;
+import ru.fozeton.chatmanager.events.channel.ChannelVisibilityChangedEvent;
 import ru.fozeton.chatmanager.utils.Logger;
+import ru.fozeton.diamondchat.configs.ConfigLoader;
+import ru.fozeton.diamondchat.gui.CalculatorScreen;
+import ru.fozeton.diamondchat.gui.MacrosScreen;
+import ru.fozeton.diamondchat.gui.widgets.DropdownButtonWidget;
+import ru.fozeton.diamondchat.gui.widgets.TabButtonWidget;
 import ru.fozeton.diamondchat.utils.MacroManager;
 import ru.fozeton.diamondchat.utils.notify.Notification;
-import ru.fozeton.diamondchat.gui.CalculatorScreen;
-import ru.fozeton.diamondchat.gui.widgets.DropdownButtonWidget;
-import ru.fozeton.diamondchat.gui.MacrosScreen;
-import ru.fozeton.diamondchat.gui.widgets.TabButtonWidget;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -37,20 +42,30 @@ import java.util.Objects;
 public class ChatScreenMixin extends Screen {
     @Unique
     private final AiStyleTextConfig styleTextConfig = ChatConfigManager.getInstance().load(AiStyleTextConfig.class);
+
     @Unique
     private final HttpClient client = HttpClient.newHttpClient();
+
     @Unique
     private final Gson gson = new Gson();
+
+    @Unique
+    private final Logger log = new Logger(ChatScreenMixin.class);
+
     @Shadow
     protected EditBox input;
+
     @Unique
     private TabButtonWidget macrosButton;
+
     @Unique
     private TabButtonWidget calculatorButton;
+
     @Unique
     private DropdownButtonWidget aiStyleText;
+
     @Unique
-    private Logger log = new Logger(ChatScreenMixin.class);
+    private DropdownButtonWidget chats;
 
     protected ChatScreenMixin(Component title) {
         super(title);
@@ -65,6 +80,7 @@ public class ChatScreenMixin extends Screen {
 
         MacrosConfig config = MacroManager.getConfig();
 
+        Minecraft instance = Minecraft.getInstance();
         this.macrosButton = new TabButtonWidget(x, y, 50, h,
                 Component.literal("Macros"),
                 () -> {
@@ -73,18 +89,33 @@ public class ChatScreenMixin extends Screen {
                     if (this.macrosButton != null)
                         this.macrosButton.setActive(config.isEnabled());
                 },
-                () -> Minecraft.getInstance().setScreen(new MacrosScreen())
+                () -> instance.setScreen(new MacrosScreen())
         );
+        this.macrosButton.setActive(config.isEnabled());
 
-        this.calculatorButton = new TabButtonWidget(x + gap, y, 80, h,
+        this.chats = new DropdownButtonWidget(x + gap, y, 50, h, Component.literal("Чаты"));
+
+        ChannelsConfig channelsConfig = ConfigLoader.getInstance().getChannelsConfig();
+
+        for (String channelId : ChatManagerCore.getChannels().keySet()) {
+            ChannelsConfig.ChannelSettings channelSettings = channelsConfig.getChannels().get(channelId);
+            if (channelSettings == null) continue;
+
+            this.chats.addItem(channelId, () -> {
+                boolean visibility = !channelSettings.isVisible();
+                ChatManagerCore.EVENT_BUS.activate(new ChannelVisibilityChangedEvent(channelId, visibility));
+            }, channelSettings::isVisible);
+        }
+
+        this.calculatorButton = new TabButtonWidget(x + gap * 2, y, 80, h,
                 Component.literal("Калькулятор"),
-                () -> Minecraft.getInstance().setScreen(new CalculatorScreen()),
+                () -> instance.setScreen(new CalculatorScreen()),
                 null
         );
 
-        this.aiStyleText = new DropdownButtonWidget(
-                Minecraft.getInstance().getWindow().getGuiScaledWidth() - 102,
-                y, 100, h, Component.literal("Стиль текста"));
+        this.aiStyleText = new DropdownButtonWidget(instance.getWindow().getGuiScaledWidth() - 102, y, 100, h,
+                Component.literal("Стиль текста"));
+
 
         for (Map.Entry<String, AiStyleTextConfig.AiStyle> entry : styleTextConfig.getStyles().entrySet()) {
             AiStyleTextConfig.AiStyle aiStyle = entry.getValue();
@@ -105,6 +136,7 @@ public class ChatScreenMixin extends Screen {
                         )
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .build();
+
                 client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenAccept(response -> {
                     int status = response.statusCode();
                     if (status >= 400) {
@@ -128,7 +160,7 @@ public class ChatScreenMixin extends Screen {
                 });
             });
         }
-        this.macrosButton.setActive(config.isEnabled());
+
     }
 
     @Inject(method = "render", at = @At("TAIL"))
@@ -136,6 +168,7 @@ public class ChatScreenMixin extends Screen {
         if (this.macrosButton != null) this.macrosButton.render(graphics, mouseX, mouseY, delta);
         if (this.calculatorButton != null) this.calculatorButton.render(graphics, mouseX, mouseY, delta);
         if (this.aiStyleText != null) this.aiStyleText.render(graphics, mouseX, mouseY, delta);
+        if (this.chats != null) this.chats.render(graphics, mouseX, mouseY, delta);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
@@ -147,6 +180,9 @@ public class ChatScreenMixin extends Screen {
             cir.setReturnValue(true);
 
         if (this.aiStyleText != null && this.aiStyleText.mouseClicked(mouseX, mouseY, button))
+            cir.setReturnValue(true);
+
+        if (this.chats != null && this.chats.mouseClicked(mouseX, mouseY, button))
             cir.setReturnValue(true);
     }
 

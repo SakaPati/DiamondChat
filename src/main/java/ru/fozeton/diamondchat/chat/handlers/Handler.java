@@ -8,6 +8,7 @@ import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageHandler;
 import ru.fozeton.chatmanager.utils.Logger;
+import ru.fozeton.diamondchat.configs.ConfigLoader;
 import ru.fozeton.diamondchat.configs.MessagesFilterConfig;
 
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 public class Handler extends MessageHandlingChannel {
     private final Logger log = new Logger(Handler.class);
     private final List<FilterHandler> filterHandlers = new ArrayList<>();
+    private final ChannelsConfig channelsConfig = ConfigLoader.getInstance().getChannelsConfig();
 
     public Handler() {
         super();
@@ -31,7 +33,6 @@ public class Handler extends MessageHandlingChannel {
             log.info("Загружено фильтров сообщений: " + filterConfig.getFilters().size());
         }
 
-        ChannelsConfig channelsConfig = ChatConfigManager.getInstance().load(ChannelsConfig.class);
         for (Map.Entry<String, ChannelsConfig.ChannelSettings> entry : channelsConfig.getChannels().entrySet()) {
             ChannelsConfig.ChannelSettings settings = entry.getValue();
             if (settings.getPattern() != null) {
@@ -67,13 +68,24 @@ public class Handler extends MessageHandlingChannel {
     protected void onPostProcess(Message message) {
         boolean handled = false;
         Map<String, ChatChannel> channels = ChatManagerCore.getChannels();
+
         for (MessageHandler handler : getHandlers()) {
             if (handler instanceof ChannelHandler channelHandler) {
                 if (handler.action(message)) {
                     log.debug("Сообщение успешно распределено в канал.");
-                    handled = true;
-                    ChatChannel channel = channels.get(channelHandler.getChannelId());
-                    if (channel != null) message.setChannel(channel);
+                    String channelId = channelHandler.getChannelId();
+                    ChatChannel channel = channels.get(channelId);
+
+                    if (channel != null) {
+                        message.setChannel(channel);
+                        if(channelsConfig.getChannels().get(channelId).isVisible()) {
+                            channel.addMessage(message);
+                            handled = true;
+                        }
+                    } else {
+                        log.error("Канал '" + channelId + "' не найден в ChatManagerCore!");
+                    }
+
                     break;
                 }
             }
@@ -84,8 +96,7 @@ public class Handler extends MessageHandlingChannel {
             if (defaultChannel != null) {
                 message.setChannel(defaultChannel);
                 defaultChannel.addMessage(message);
-            }
-            else log.error("Канал 'Default' не найден в ChatManagerCore!");
+            } else log.error("Канал 'Default' не найден в ChatManagerCore!");
         }
     }
 }

@@ -14,12 +14,13 @@ import ru.fozeton.chatmanager.events.InputEvent;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.utils.enums.DragMode;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 
 public class ChatChannelScrollHandler {
     private final ChannelsConfig.ChannelSettings settings;
-    private final List<ChatChannelView.ChatLine> chatLines;
+    private final Collection<ChatChannelView.ChatLine> chatLines;
     private final ReadWriteLock lock;
     private final ChatChannelDragHandler dragHandler;
     private final ChatChannelGeometry geometry;
@@ -33,7 +34,7 @@ public class ChatChannelScrollHandler {
 
     public ChatChannelScrollHandler(
             ChannelsConfig.ChannelSettings settings,
-            List<ChatChannelView.ChatLine> chatLines,
+            Collection<ChatChannelView.ChatLine> chatLines,
             ChatChannelDragHandler dragHandler,
             ReadWriteLock lock,
             ChatChannelGeometry geometry,
