@@ -3,6 +3,7 @@ package ru.fozeton.diamondchat.utils;
 import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
+import ru.dargen.evoplus.api.EvoPlusApi;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.config.MacrosConfig;
@@ -16,20 +17,7 @@ public class MacroManager {
     @Getter
     private static final MacroManager instance = new MacroManager();
     private static final Map<String, Integer> timers = new HashMap<>();
-    private static MacrosConfig config;
-
-    public static MacrosConfig getConfig() {
-        if (config == null) {
-            config = ChatConfigManager.getInstance().load(MacrosConfig.class);
-        }
-        return config;
-    }
-
-    public static void saveConfig() {
-        if (config != null) {
-            ChatConfigManager.getInstance().save(config);
-        }
-    }
+    private static final MacrosConfig config = ChatConfigManager.getInstance().getMacrosConfig();
 
     public MacroManager() {
         ChatManagerCore.EVENT_BUS.register(this);
@@ -39,10 +27,11 @@ public class MacroManager {
     public void onSecondElapsed(SecondElapsedEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        MacrosConfig cfg = getConfig();
-        if (!cfg.isEnabled()) return;
-        for (String key : new ArrayList<>(cfg.getMacros().keySet())) {
-            MacrosConfig.Macros m = cfg.getMacros().get(key);
+        if(EvoPlusApi.getServer().getId() == 0) return;
+
+        if (!config.isEnabled()) return;
+        for (String key : new ArrayList<>(config.getMacros().keySet())) {
+            MacrosConfig.Macros m = config.getMacros().get(key);
             if (m == null || !m.isActive()) {
                 timers.put(key, 0);
                 continue;

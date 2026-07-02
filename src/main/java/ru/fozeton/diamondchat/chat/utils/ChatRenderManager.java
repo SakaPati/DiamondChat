@@ -21,7 +21,7 @@ public class ChatRenderManager {
 
     private ChatRenderManager() {
         Logger log = new Logger(ChatRenderManager.class);
-        ChannelsConfig config = ChatConfigManager.getInstance().load(ChannelsConfig.class);
+        ChannelsConfig config = ChatConfigManager.getInstance().getChannelsConfig();
 
         for (Map.Entry<String, ChannelsConfig.ChannelSettings> entry : config.getChannels().entrySet()) {
             String channelId = entry.getKey();

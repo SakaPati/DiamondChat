@@ -12,6 +12,7 @@ import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.PlayerMentionedEvent;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
+import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.PlaySounds;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;

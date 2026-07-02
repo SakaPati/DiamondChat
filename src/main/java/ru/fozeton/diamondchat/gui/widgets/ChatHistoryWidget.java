@@ -15,7 +15,7 @@ import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
-import ru.fozeton.diamondchat.chat.utils.channel.MessageColorRemapper;
+import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.diamondchat.utils.notify.Notification;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class ChatHistoryWidget extends AbstractWidget {
     private static final int COL_THUMB_DARK = 0xFF5b50c4;
 
     private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
-    private final ChannelsConfig settings = ChatConfigManager.getInstance().load(ChannelsConfig.class);
+    private final ChannelsConfig settings = ChatConfigManager.getInstance().getChannelsConfig();
     private final int blinkHex;
     private final AtomicLong currentBuildId = new AtomicLong(0);
     @Setter

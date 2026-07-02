@@ -14,11 +14,11 @@ base {
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
+    maven { url 'https://maven.architectury.dev/' }
     maven {
         name = "ferra13671-maven"
         url = "https://ferra13671.github.io/maven/"
     }
-    flatDir { dirs 'libs' }
 }
 
 dependencies {
@@ -29,7 +29,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.46")
     implementation "com.ferra13671:mega-events:1.7.1"
     include "com.ferra13671:mega-events:1.7.1"
-    modImplementation files("libs/chatmanager_core-fabric-1.0-SNAPSHOT.jar")
+    modImplementation "com.github.SakaPati.ChatManager-Core:chatmanager_core-fabric:1.0.0"
     modImplementation "com.github.evo-plus:evo-plus-api:1.0.11"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }

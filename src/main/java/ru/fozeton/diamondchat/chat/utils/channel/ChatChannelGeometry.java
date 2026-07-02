@@ -8,9 +8,12 @@ import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.messages.Message;
+import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 
 @Getter
@@ -75,7 +78,7 @@ public class ChatChannelGeometry {
     }
 
     public void persistDimensions() {
-        ChannelsConfig config = ChatConfigManager.getInstance().load(ChannelsConfig.class);
+        ChannelsConfig config = ChatConfigManager.getInstance().getChannelsConfig();
         config.getChannels().get(channel.getId()).setWidth(width);
         config.getChannels().get(channel.getId()).setHeight(height);
         config.getChannels().get(channel.getId()).setX(x);

@@ -5,11 +5,10 @@ import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.channel.MessageHandlingChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
+import ru.fozeton.chatmanager.config.MessagesFilterConfig;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageHandler;
 import ru.fozeton.chatmanager.utils.Logger;
-import ru.fozeton.diamondchat.configs.ConfigLoader;
-import ru.fozeton.diamondchat.configs.MessagesFilterConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +18,12 @@ import java.util.regex.Pattern;
 public class Handler extends MessageHandlingChannel {
     private final Logger log = new Logger(Handler.class);
     private final List<FilterHandler> filterHandlers = new ArrayList<>();
-    private final ChannelsConfig channelsConfig = ConfigLoader.getInstance().getChannelsConfig();
+    private final ChannelsConfig channelsConfig = ChatConfigManager.getInstance().getChannelsConfig();
 
     public Handler() {
         super();
         log.info("Инициализация обработчика чата...");
-        MessagesFilterConfig filterConfig = ChatConfigManager.getInstance().load(MessagesFilterConfig.class);
+        MessagesFilterConfig filterConfig = ChatConfigManager.getInstance().getMessagesFilterConfig();
 
         if (filterConfig != null && filterConfig.getFilters() != null) {
             for (var msg : filterConfig.getFilters()) {

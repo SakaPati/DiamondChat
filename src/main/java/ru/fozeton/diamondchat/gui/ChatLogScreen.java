@@ -41,7 +41,7 @@ public class ChatLogScreen extends Screen {
         ));
         xPadding += 100;
 
-        ChannelsConfig channelsConfig = ChatConfigManager.getInstance().load(ChannelsConfig.class);
+        ChannelsConfig channelsConfig = ChatConfigManager.getInstance().getChannelsConfig();
         for (Map.Entry<String, ChannelsConfig.ChannelSettings> entry : channelsConfig.getChannels().entrySet()) {
             String channelId = entry.getKey();
             ChannelsConfig.ChannelSettings settings = entry.getValue();

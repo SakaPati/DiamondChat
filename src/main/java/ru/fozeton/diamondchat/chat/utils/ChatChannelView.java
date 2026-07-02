@@ -16,9 +16,9 @@ import ru.fozeton.chatmanager.events.channel.ChannelVisibilityChangedEvent;
 import ru.fozeton.chatmanager.events.channel.MessageAddedToChannelEvent;
 import ru.fozeton.chatmanager.events.channel.MessageStackEvent;
 import ru.fozeton.chatmanager.messages.Message;
+import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.chat.utils.channel.*;
-import ru.fozeton.diamondchat.configs.ConfigLoader;
 import ru.fozeton.diamondchat.utils.notify.Notification;
 
 import java.time.Instant;
@@ -41,7 +41,7 @@ public class ChatChannelView {
         this.channel = channel;
         Objects.requireNonNull(channel, "Channel cannot be null");
 
-        config = ConfigLoader.getInstance().getChannelsConfig();
+        config = ChatConfigManager.getInstance().getChannelsConfig();
         settings = config.getChannels().get(channel.getId());
 
         if (settings == null)

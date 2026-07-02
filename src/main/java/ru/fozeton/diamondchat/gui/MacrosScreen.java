@@ -4,8 +4,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.config.MacrosConfig;
-import ru.fozeton.diamondchat.utils.MacroManager;
 import ru.fozeton.diamondchat.gui.widgets.SimpleButton;
 
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ public class MacrosScreen extends Screen {
 
     public MacrosScreen() {
         super(Component.literal("Макросы"));
-        this.config = MacroManager.getConfig();
+        this.config = ChatConfigManager.getInstance().getMacrosConfig();
         this.keys.addAll(config.getMacros().keySet());
     }
 
@@ -86,7 +86,7 @@ public class MacrosScreen extends Screen {
             addRenderableWidget(SimpleButton.of(guiX + PAD, rowY, MACRO_W, ROW_H,
                     Component.literal(label), labelColor, btn -> {
                         m.setActive(!m.isActive());
-                        MacroManager.saveConfig();
+                        ChatConfigManager.getInstance().save(config);
                         rebuildWidgets();
                     }));
 
@@ -98,7 +98,7 @@ public class MacrosScreen extends Screen {
                     Component.literal("✕"), COL_RED, btn -> {
                         config.getMacros().remove(key);
                         keys.remove(key);
-                        MacroManager.saveConfig();
+                        ChatConfigManager.getInstance().save(config);
                         rebuildWidgets();
                     }));
         }
@@ -158,12 +158,10 @@ public class MacrosScreen extends Screen {
         } catch (NumberFormatException ignored) {
         }
 
-        MacrosConfig.Macros entry = new MacrosConfig.Macros();
-        entry.setTime(time);
-        entry.setActive(true);
+        MacrosConfig.Macros entry = new MacrosConfig.Macros(time, true);
         config.getMacros().put(key, entry);
         keys.add(key);
-        MacroManager.saveConfig();
+        ChatConfigManager.getInstance().save(config);
         rebuildWidgets();
     }
 }

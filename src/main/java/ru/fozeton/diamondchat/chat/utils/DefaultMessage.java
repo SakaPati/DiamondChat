@@ -1,7 +1,6 @@
 package ru.fozeton.diamondchat.chat.utils;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket;
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import ru.dargen.evoplus.api.EvoPlusApi;
 import ru.fozeton.chatmanager.messages.ChatMessageParser;
@@ -17,17 +16,6 @@ public class DefaultMessage implements ChatMessageParser {
     private final Pattern evo = Pattern.compile("\\w+(?=(?:\\s+[^\\[\\s]+)?\\s+\\[)");
     private final Pattern hub = Pattern.compile(" \\w+(?=:)");
     private final Pattern INVISIBLE_CHARS = Pattern.compile("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]");
-
-    @Override
-    public Message parsePlayerChat(ClientboundPlayerChatPacket packet) {
-        return new Message(
-                UUID.randomUUID().toString(),
-                packet.chatType().name().getString(),
-                packet.unsignedContent(),
-                packet.unsignedContent() != null ? packet.unsignedContent().getString() : packet.body().content(),
-                MessageType.PLAYER,
-                packet.body().timeStamp());
-    }
 
     @Override
     public Message parseSystemChat(ClientboundSystemChatPacket packet) {
@@ -46,7 +34,7 @@ public class DefaultMessage implements ChatMessageParser {
         return new Message(
                 UUID.randomUUID().toString(),
                 author,
-                content,
+                useTimeFormatter(content),
                 text,
                 type,
                 Instant.now()

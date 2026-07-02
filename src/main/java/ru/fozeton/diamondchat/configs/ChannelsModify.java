@@ -1,13 +1,14 @@
 package ru.fozeton.diamondchat.configs;
 
 import ru.fozeton.chatmanager.config.ChannelsConfig;
+import ru.fozeton.chatmanager.config.defaults.ChannelsDefault;
 
-public class ChatChannelsConfig implements Config<ChannelsConfig>{
+public class ChannelsModify extends ChannelsDefault {
     @Override
     public ChannelsConfig createDefault() {
         ChannelsConfig config = new ChannelsConfig();
 
-       ChannelsConfig.ChannelSettings defaultSettings = new ChannelsConfig.ChannelSettings();
+        ChannelsConfig.ChannelSettings defaultSettings = new ChannelsConfig.ChannelSettings();
         defaultSettings.setId("Default");
         defaultSettings.setName("Основной");
         defaultSettings.setX(15);
@@ -24,7 +25,7 @@ public class ChatChannelsConfig implements Config<ChannelsConfig>{
         privateSettings.setWidth(400);
         privateSettings.setHeight(200);
 
-       ChannelsConfig.ChannelSettings clanSettings = new ChannelsConfig.ChannelSettings();
+        ChannelsConfig.ChannelSettings clanSettings = new ChannelsConfig.ChannelSettings();
         clanSettings.setId("Clan");
         clanSettings.setName("Клан");
         clanSettings.setPattern("^\\s*\\[Клан]");
@@ -33,7 +34,7 @@ public class ChatChannelsConfig implements Config<ChannelsConfig>{
         clanSettings.setWidth(400);
         clanSettings.setHeight(200);
 
-       ChannelsConfig.ChannelSettings localSettings = new ChannelsConfig.ChannelSettings();
+        ChannelsConfig.ChannelSettings localSettings = new ChannelsConfig.ChannelSettings();
         localSettings.setId("Local");
         localSettings.setName("Локальный чат");
         localSettings.setPattern("^Ⓛ");
@@ -42,7 +43,7 @@ public class ChatChannelsConfig implements Config<ChannelsConfig>{
         localSettings.setWidth(400);
         localSettings.setHeight(200);
 
-       ChannelsConfig.ChannelSettings tradeSettings = new ChannelsConfig.ChannelSettings();
+        ChannelsConfig.ChannelSettings tradeSettings = new ChannelsConfig.ChannelSettings();
         tradeSettings.setId("Trade");
         tradeSettings.setName("Торговый чат");
         tradeSettings.setPattern("^Ⓜ");
@@ -58,10 +59,5 @@ public class ChatChannelsConfig implements Config<ChannelsConfig>{
         config.getChannels().put("Trade", tradeSettings);
 
         return config;
-    }
-
-    @Override
-    public boolean isEmpty(ChannelsConfig config) {
-        return config == null || config.getChannels() == null || config.getChannels().isEmpty();
     }
 }

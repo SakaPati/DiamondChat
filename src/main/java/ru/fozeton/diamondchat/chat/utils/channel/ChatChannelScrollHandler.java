@@ -15,7 +15,6 @@ import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.utils.enums.DragMode;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 
 public class ChatChannelScrollHandler {
