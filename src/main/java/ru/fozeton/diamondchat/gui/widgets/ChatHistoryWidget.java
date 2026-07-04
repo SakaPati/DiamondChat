@@ -222,7 +222,7 @@ public class ChatHistoryWidget extends AbstractWidget {
                         }
                     } else {
                         Minecraft.getInstance().keyboardHandler.setClipboard(cl.message().getContent().getString());
-                        Notification.showInfo("Сообщение скопировано успешно!");
+                        Notification.showInfo("Сообщение скопировано успешно!", null);
                         return true;
                     }
                 }

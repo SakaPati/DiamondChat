@@ -138,7 +138,7 @@ public class ChatChannelView {
                                 .ifPresent(message -> {
                                     String plainText = message.getContent().getString();
                                     client.keyboardHandler.setClipboard(plainText);
-                                    Notification.showInfo("Сообщение скопировано успешно!");
+                                    Notification.showInfo("Сообщение скопировано успешно!", null);
                                 });
                     }
                 } finally {

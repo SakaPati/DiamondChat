@@ -9,7 +9,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 import ru.fozeton.chatmanager.events.InputEvent;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.events.game.NotificationEvent;
@@ -137,7 +139,7 @@ public class NotificationManager {
 
     @EventSubscriber(event = NotificationEvent.class)
     public void onNotificationReceived(NotificationEvent event) {
-        activeNotifications.add(new ActiveNotification(event.getNotification()));
+        activeNotifications.add(new ActiveNotification(event.getNotification(), event.getNotification().getTextFont()));
     }
 
     @EventSubscriber(event = InputEvent.MouseInputEvent.class)
@@ -180,16 +182,19 @@ public class NotificationManager {
         private final long expiryTime;
         private final NotificationType type;
         private final Runnable action;
+        @Nullable
+        private final ResourceLocation textFont;
 
         private boolean closing = false;
         private long closeStartTime;
 
-        public ActiveNotification(Notification notification) {
+        public ActiveNotification(Notification notification, @Nullable ResourceLocation textFont) {
             this.notification = notification;
             this.startTime = System.currentTimeMillis();
             this.expiryTime = this.startTime + notification.getDuration().toMillis();
             this.type = notification.getType();
             this.action = notification.getAction();
+            this.textFont = textFont;
         }
 
         public RenderGeometry calculateGeometry(
@@ -198,8 +203,8 @@ public class NotificationManager {
                 int windowWidth,
                 int currentY
         ) {
-            Component title = Component.literal(notification.getTitle());
-            Component message = Component.literal(notification.getMessage());
+            Component title = textFont == null ? Component.literal(notification.getTitle()) : Component.literal(notification.getTitle()).setStyle(Style.EMPTY.withFont(textFont));
+            Component message = textFont == null ? Component.literal(notification.getMessage()) : Component.literal(notification.getMessage()).setStyle(Style.EMPTY.withFont(textFont));
 
             float scaledTitleWidth = Font.width(title) * titleScale;
             float scaledMessageWidth = Font.width(message) * messageScale;

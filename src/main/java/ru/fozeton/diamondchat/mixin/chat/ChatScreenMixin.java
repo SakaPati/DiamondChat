@@ -49,7 +49,7 @@ public class ChatScreenMixin extends Screen {
         super(title);
     }
 
-    @Inject(method = "init", at = @At("TAIL"))
+    @Inject(method = "init", at = @At("HEAD"))
     private void onInit(CallbackInfo ci) {
         int y = this.height - 30;
         int h = 14;
