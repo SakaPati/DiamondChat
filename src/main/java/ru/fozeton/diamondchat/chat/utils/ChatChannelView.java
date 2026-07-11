@@ -96,7 +96,7 @@ public class ChatChannelView {
                 Font renderer = client.font;
                 int currentY = y + viewHeight;
 
-                int maxVisible = channel.getMaxVisibleMessage();
+                int maxVisible = settings.getMaxVisibleLine();
                 int renderedLinesCount = 0;
                 int skippedLines = 0;
                 String clickedMessageId = null;

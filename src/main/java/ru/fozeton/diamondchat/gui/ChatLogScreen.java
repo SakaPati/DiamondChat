@@ -9,13 +9,28 @@ import ru.fozeton.diamondchat.gui.widgets.ChannelButton;
 import ru.fozeton.diamondchat.gui.widgets.ChatHistoryWidget;
 import ru.fozeton.diamondchat.gui.widgets.SearchEditBox;
 
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class ChatLogScreen extends Screen {
+    private static final int BUTTON_GAP = 6;
+    private static final int BUTTON_HPADDING = 16;
+    private static final int MIN_BUTTON_WIDTH = 50;
+    private static final int CHANNELS_AREA_HEIGHT = 20;
+    private static final int SEARCH_RESERVED_WIDTH = 140;
+    private static final int MAX_CONTENT_WIDTH_THRESHOLD = 1630;
+    private static final int SCROLL_STEP = 20;
+
     private ChatHistoryWidget historyWidget;
     private String currentChannelId = null;
     private String currentSearchQuery = "";
+
+    private final List<ChannelButton> channelButtonsList = new ArrayList<>();
+    private int channelsAreaX;
+    private int channelsAreaY = 20;
+    private int channelsAreaWidth;
+    private int channelsContentWidth = 0;
+    private int channelsScrollOffset = 0;
+    private boolean channelsScrollEnabled = false;
 
     public ChatLogScreen() {
         super(Component.literal("Chat Log"));
@@ -33,25 +48,13 @@ public class ChatLogScreen extends Screen {
 
         updateChannel(null);
 
-        int xPadding = 10;
-
-        this.addRenderableWidget(new ChannelButton(xPadding, 20, 90, 20, Component.literal("Все"),
-                () -> updateChannel(null),
-                () -> this.currentChannelId == null
-        ));
-        xPadding += 100;
-
-        ChannelsConfig channelsConfig = ChatConfigManager.getInstance().getChannelsConfig();
-        for (Map.Entry<String, ChannelsConfig.ChannelSettings> entry : channelsConfig.getChannels().entrySet()) {
-            String channelId = entry.getKey();
-            ChannelsConfig.ChannelSettings settings = entry.getValue();
-
-            this.addRenderableWidget(new ChannelButton(xPadding, 20, 120, 20, Component.literal(settings.getName()),
-                    () -> updateChannel(channelId),
-                    () -> Objects.equals(this.currentChannelId, channelId)
-            ));
-            xPadding += 130;
+        this.channelsAreaX = 10;
+        this.channelsAreaWidth = this.width - this.channelsAreaX - SEARCH_RESERVED_WIDTH;
+        if (this.channelsAreaWidth < 100) {
+            this.channelsAreaWidth = 100;
         }
+
+        buildChannelButtons();
 
         int inputWidth = 100;
         int margin = 25;
@@ -61,6 +64,56 @@ public class ChatLogScreen extends Screen {
             this.historyWidget.updateCacheAsync(this.currentSearchQuery, this.currentChannelId);
         });
         this.addRenderableWidget(searchBox);
+    }
+
+    private void buildChannelButtons() {
+        this.channelButtonsList.clear();
+        this.channelsScrollOffset = 0;
+
+        // id=null -> "Все" + все каналы из конфига, в порядке добавления
+        Map<String, String> entries = new LinkedHashMap<>();
+        entries.put(null, "Все");
+        ChannelsConfig channelsConfig = ChatConfigManager.getInstance().getChannelsConfig();
+        for (Map.Entry<String, ChannelsConfig.ChannelSettings> entry : channelsConfig.getChannels().entrySet()) {
+            entries.put(entry.getKey(), entry.getValue().getName());
+        }
+
+        int totalWidth = 0;
+        for (Map.Entry<String, String> entry : entries.entrySet()) {
+            String channelId = entry.getKey();
+            String name = entry.getValue();
+
+            int textWidth = this.font.width(name);
+            int btnWidth = Math.max(MIN_BUTTON_WIDTH, textWidth + BUTTON_HPADDING);
+
+            ChannelButton button = new ChannelButton(0, this.channelsAreaY, btnWidth, CHANNELS_AREA_HEIGHT,
+                    Component.literal(name),
+                    () -> updateChannel(channelId),
+                    () -> Objects.equals(this.currentChannelId, channelId)
+            );
+
+            this.channelButtonsList.add(button);
+            totalWidth += btnWidth + BUTTON_GAP;
+        }
+        this.channelsContentWidth = Math.max(0, totalWidth - BUTTON_GAP);
+
+        int channelsCount = channelsConfig.getChannels().size();
+        this.channelsScrollEnabled = channelsCount > 6 || this.channelsContentWidth > MAX_CONTENT_WIDTH_THRESHOLD;
+
+        repositionChannelButtons();
+    }
+
+    private void repositionChannelButtons() {
+        int x = this.channelsAreaX - this.channelsScrollOffset;
+        for (ChannelButton button : this.channelButtonsList) {
+            button.setX(x);
+            x += button.getWidth() + BUTTON_GAP;
+        }
+    }
+
+    private boolean isInsideChannelsArea(double mouseX, double mouseY) {
+        return mouseX >= this.channelsAreaX && mouseX <= this.channelsAreaX + this.channelsAreaWidth
+                && mouseY >= this.channelsAreaY && mouseY <= this.channelsAreaY + CHANNELS_AREA_HEIGHT;
     }
 
     private void updateChannel(String channelId) {
@@ -79,6 +132,53 @@ public class ChatLogScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderChannelButtons(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private void renderChannelButtons(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        boolean scissor = this.channelsScrollEnabled;
+        if (scissor) {
+            graphics.enableScissor(this.channelsAreaX, this.channelsAreaY,
+                    this.channelsAreaX + this.channelsAreaWidth, this.channelsAreaY + CHANNELS_AREA_HEIGHT);
+        }
+        for (ChannelButton button : this.channelButtonsList) {
+            button.render(graphics, mouseX, mouseY, partialTick);
+        }
+        if (scissor) {
+            graphics.disableScissor();
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        for (ChannelButton channelButton : this.channelButtonsList) {
+            if (isInsideChannelsArea(mouseX, mouseY) && channelButton.isMouseOver(mouseX, mouseY)) {
+                if (channelButton.mouseClicked(mouseX, mouseY, button)) {
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        for (ChannelButton channelButton : this.channelButtonsList) {
+            channelButton.mouseReleased(mouseX, mouseY, button);
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (this.channelsScrollEnabled && isInsideChannelsArea(mouseX, mouseY)) {
+            int maxOffset = Math.max(0, this.channelsContentWidth - this.channelsAreaWidth);
+            this.channelsScrollOffset -= (int) (scrollY * SCROLL_STEP);
+            this.channelsScrollOffset = Math.max(0, Math.min(this.channelsScrollOffset, maxOffset));
+            repositionChannelButtons();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override

@@ -14,7 +14,7 @@ import ru.fozeton.diamondchat.utils.KeyBind;
 import ru.fozeton.diamondchat.utils.notify.NotificationManager;
 
 public final class DiamondChat implements ClientModInitializer {
-    public static IEventBus EVENT_BUS = new EventBus();
+    public static final IEventBus EVENT_BUS = new EventBus();
     public static Chat CHAT_INSTANCE;
     public static ChannelsModify CHAT_MODIFY_INSTANCE = new ChannelsModify();
 

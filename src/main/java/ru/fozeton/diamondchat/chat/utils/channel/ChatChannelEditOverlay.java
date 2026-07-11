@@ -208,4 +208,20 @@ public class ChatChannelEditOverlay {
         }
     }
 
+    @EventSubscriber(event = InputEvent.KeyInputEvent.class)
+    public void keyPress(InputEvent.KeyInputEvent event) {
+        boolean active = event.getAction() == InputEvent.KeyInputEvent.Action.PRESS || event.getAction() == InputEvent.KeyInputEvent.Action.HOLDING;
+
+        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_CONTROL && Minecraft.getInstance().screen instanceof ChatScreen) {
+            if (active) {
+                if (dragHandler.getCurrentMode() == DragMode.NONE) dragHandler.setCurrentMode(DragMode.EDIT);
+            } else {
+                if (dragHandler.getCurrentMode() != DragMode.NONE) {
+                    geometry.persistDimensions();
+                    dragHandler.setCurrentMode(DragMode.NONE);
+                    activeResizing.clear();
+                }
+            }
+        }
+    }
 }

@@ -13,7 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DefaultMessage implements ChatMessageParser {
-    private final Pattern universalPattern = Pattern.compile("\\b\\w+(?=\\s*(?:\\[[\\w\\s-]+]\\s*)?:)");
+    private final Logger log = new Logger(DefaultMessage.class);
+    private final Pattern universalPattern = Pattern.compile("(?<=\\s)[A-Za-z0-9_]{3,16}(?=[^:\\n]*:)");
     private final Pattern INVISIBLE_CHARS = Pattern.compile("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]");
     private final Pattern COLOR_CODES = Pattern.compile("§.");
 
@@ -21,9 +22,11 @@ public class DefaultMessage implements ChatMessageParser {
     public Message parseSystemChat(ClientboundSystemChatPacket packet) {
         Component content = packet.content();
         String text = content.getString();
-
+        log.debug("Original text. " + text);
         String cleanColors = COLOR_CODES.matcher(text).replaceAll("");
+        log.debug("Clear color. " + text);
         String cleaned = INVISIBLE_CHARS.matcher(cleanColors).replaceAll("");
+        log.debug("Cleaned. " + text);
 
         String author = getNickname(cleaned);
 
@@ -32,9 +35,7 @@ public class DefaultMessage implements ChatMessageParser {
         if (content.getStyle().getColor() != null) {
             String colorName = content.getStyle().getColor().serialize();
             boolean isRedError = "red".equals(colorName) || "dark_red".equals(colorName);
-            if (isRedError) {
-                type = MessageType.ERROR;
-            }
+            if (isRedError) type = MessageType.ERROR;
         }
 
         return new Message(
@@ -51,9 +52,7 @@ public class DefaultMessage implements ChatMessageParser {
         Matcher matcher = universalPattern.matcher(cleanedLine);
 
         String lastMatch = null;
-        while (matcher.find()) {
-            lastMatch = matcher.group().trim();
-        }
+        while (matcher.find()) lastMatch = matcher.group().trim();
 
         return lastMatch;
     }

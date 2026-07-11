@@ -79,10 +79,12 @@ public class ChatChannelGeometry {
 
     public void persistDimensions() {
         ChannelsConfig config = ChatConfigManager.getInstance().getChannelsConfig();
-        config.getChannels().get(channel.getId()).setWidth(width);
-        config.getChannels().get(channel.getId()).setHeight(height);
-        config.getChannels().get(channel.getId()).setX(x);
-        config.getChannels().get(channel.getId()).setY(y);
+        ChannelsConfig.ChannelSettings channelSettings = config.getChannels().get(channel.getId());
+        channelSettings.setMaxVisibleLine(getViewHeight() / 12);
+        channelSettings.setWidth(width);
+        channelSettings.setHeight(height);
+        channelSettings.setX(x);
+        channelSettings.setY(y);
 
         ChatConfigManager.getInstance().save(config);
     }

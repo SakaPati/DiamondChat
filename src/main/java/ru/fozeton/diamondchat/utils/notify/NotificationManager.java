@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
+import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.events.InputEvent;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.events.game.NotificationEvent;
@@ -23,11 +24,9 @@ import java.util.List;
 public class NotificationManager {
     @Getter
     private static final NotificationManager instance = new NotificationManager();
-
     private static final float titleScale = 1.4f;
     private static final float messageScale = 1.2f;
     private static final long ANIMATION_DURATION = 150;
-
     private final List<ActiveNotification> activeNotifications = new ArrayList<>();
 
     public NotificationManager() {
@@ -49,6 +48,7 @@ public class NotificationManager {
                         }
                 ));
         DiamondChat.EVENT_BUS.register(this);
+        ChatManagerCore.EVENT_BUS.register(this);
     }
 
     private void renderNotifications(GuiGraphics GuiGraphics, Minecraft client) {
@@ -152,8 +152,8 @@ public class NotificationManager {
         int windowWidth = client.getWindow().getGuiScaledWidth();
         int windowHeight = client.getWindow().getGuiScaledHeight();
 
-        double mouseX = client.mouseHandler.xpos() * (double) windowWidth / (double) client.getWindow().getWidth();
-        double mouseY = client.mouseHandler.ypos() * (double) windowHeight / (double) client.getWindow().getHeight();
+        double mouseX = client.mouseHandler.xpos() * (double) windowWidth / (double) client.getWindow().getScreenWidth();
+        double mouseY = client.mouseHandler.ypos() * (double) windowHeight / (double) client.getWindow().getScreenHeight();
 
         int currentY = 10;
         int spacing = 5;

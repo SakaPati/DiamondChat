@@ -6,13 +6,11 @@ import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.ChatScreen;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.InputEvent;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
-import ru.fozeton.diamondchat.utils.enums.DragMode;
 
 import java.util.Collection;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -104,23 +102,7 @@ public class ChatChannelScrollHandler {
     public void keyPress(InputEvent.KeyInputEvent event) {
         boolean active = event.getAction() == InputEvent.KeyInputEvent.Action.PRESS || event.getAction() == InputEvent.KeyInputEvent.Action.HOLDING;
 
-        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_SHIFT) {
-            isPressedShift = active;
-
-        } else if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_CONTROL
-                && Minecraft.getInstance().screen instanceof ChatScreen) {
-
-            if (active) {
-                if (dragHandler.getCurrentMode() == DragMode.NONE)
-                    dragHandler.setCurrentMode(DragMode.EDIT);
-            } else {
-                if (dragHandler.getCurrentMode() != DragMode.NONE) {
-                    geometry.persistDimensions();
-                    dragHandler.setCurrentMode(DragMode.NONE);
-                    editOverlay.getActiveResizing().clear();
-                }
-            }
-        }
+        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_SHIFT) isPressedShift = active;
     }
 
     public void resetScroll() {

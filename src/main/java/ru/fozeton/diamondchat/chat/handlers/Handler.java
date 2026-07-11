@@ -5,7 +5,6 @@ import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.channel.MessageHandlingChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
-import ru.fozeton.chatmanager.config.MessagesFilterConfig;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageHandler;
 import ru.fozeton.chatmanager.utils.Logger;
@@ -23,11 +22,18 @@ public class Handler extends MessageHandlingChannel {
     public Handler() {
         super();
         log.info("Инициализация обработчика чата...");
-        MessagesFilterConfig filterConfig = ChatConfigManager.getInstance().getMessagesFilterConfig();
+        var filterConfig = ChatConfigManager.getInstance().getMessagesFilterConfig();
 
         if (filterConfig != null && filterConfig.getFilters() != null) {
             for (var msg : filterConfig.getFilters()) {
-                filterHandlers.add(new FilterHandler(Pattern.compile(msg.getPattern()), msg.getLineColor(), msg.getBorderColor()));
+                var handler = FilterHandler.builder()
+                        .pattern(Pattern.compile(msg.getPattern()))
+                        .lineColor(msg.getLineColor())
+                        .borderColor(msg.getBorderColor())
+                        .replyMessage(msg.getReplyMessage())
+                        .build();
+
+                filterHandlers.add(handler);
             }
             log.info("Загружено фильтров сообщений: " + filterConfig.getFilters().size());
         }
