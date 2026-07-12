@@ -29,7 +29,8 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.46")
     implementation "com.ferra13671:mega-events:1.7.1"
     include "com.ferra13671:mega-events:1.7.1"
-    modImplementation "com.github.SakaPati.ChatManager-Core:chatmanager_core-fabric:-SNAPSHOT"
+    modImplementation files("libs/chatmanager_core-fabric-1.0.0.jar")
+//    modImplementation "com.github.SakaPati.ChatManager-Core:chatmanager_core-fabric:master-SNAPSHOT"
     modImplementation "com.github.evo-plus:evo-plus-api:1.0.11"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }

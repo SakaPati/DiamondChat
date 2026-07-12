@@ -5,7 +5,6 @@ import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import ru.fozeton.chatmanager.messages.ChatMessageParser;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
-import ru.fozeton.chatmanager.utils.Logger;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,7 +12,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DefaultMessage implements ChatMessageParser {
-    private final Logger log = new Logger(DefaultMessage.class);
     private final Pattern universalPattern = Pattern.compile("(?<=\\s)[A-Za-z0-9_]{3,16}(?=[^:\\n]*:)");
     private final Pattern INVISIBLE_CHARS = Pattern.compile("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]");
     private final Pattern COLOR_CODES = Pattern.compile("§.");
@@ -22,11 +20,8 @@ public class DefaultMessage implements ChatMessageParser {
     public Message parseSystemChat(ClientboundSystemChatPacket packet) {
         Component content = packet.content();
         String text = content.getString();
-        log.debug("Original text. " + text);
         String cleanColors = COLOR_CODES.matcher(text).replaceAll("");
-        log.debug("Clear color. " + text);
         String cleaned = INVISIBLE_CHARS.matcher(cleanColors).replaceAll("");
-        log.debug("Cleaned. " + text);
 
         String author = getNickname(cleaned);
 
@@ -42,7 +37,7 @@ public class DefaultMessage implements ChatMessageParser {
                 UUID.randomUUID().toString(),
                 author,
                 useTimeFormatter(content),
-                text,
+                cleaned,
                 type,
                 Instant.now()
         );
