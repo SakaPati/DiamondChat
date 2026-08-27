@@ -11,6 +11,7 @@ import ru.fozeton.diamondchat.chat.utils.ChatRenderManager;
 import ru.fozeton.diamondchat.configs.AiStyleTextModify;
 import ru.fozeton.diamondchat.configs.ChannelsModify;
 import ru.fozeton.diamondchat.utils.KeyBind;
+import ru.fozeton.diamondchat.utils.MacroManager;
 import ru.fozeton.diamondchat.utils.notify.NotificationManager;
 
 public final class DiamondChat implements ClientModInitializer {
@@ -28,5 +29,6 @@ public final class DiamondChat implements ClientModInitializer {
         KeyBind.getInstance().register();
         CHAT_INSTANCE = new Chat();
         NotificationManager.getInstance();
+        MacroManager.getInstance();
     }
 }

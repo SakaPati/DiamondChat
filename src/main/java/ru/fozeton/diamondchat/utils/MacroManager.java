@@ -31,22 +31,18 @@ public class MacroManager {
 
         if (!config.isEnabled()) return;
         for (String key : new ArrayList<>(config.getMacros().keySet())) {
-            MacrosConfig.Macros m = config.getMacros().get(key);
-            if (m == null || !m.isActive()) {
+            MacrosConfig.Macros macros = config.getMacros().get(key);
+            if (macros == null || !macros.isActive()) {
                 timers.put(key, 0);
                 continue;
             }
 
             int elapsed = timers.getOrDefault(key, 0) + 1;
-
-            if (elapsed >= m.getTime()) {
+            if (elapsed >= macros.getTime()) {
                 timers.put(key, 0);
                 if (key.startsWith("/")) mc.player.connection.sendCommand(key.substring(1));
                 else mc.player.connection.sendChat(key);
-
-            } else {
-                timers.put(key, elapsed);
-            }
+            } else timers.put(key, elapsed);
         }
     }
 }

@@ -1,11 +1,14 @@
 package ru.fozeton.diamondchat.mixin.chat;
 
+import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,6 +21,7 @@ import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.config.MacrosConfig;
 import ru.fozeton.chatmanager.events.channel.ChannelVisibilityChangedEvent;
 import ru.fozeton.chatmanager.events.game.StylizeMessageEvent;
+import ru.fozeton.chatmanager.events.speech.VoskPartialResultEvent;
 import ru.fozeton.diamondchat.gui.CalculatorScreen;
 import ru.fozeton.diamondchat.gui.MacrosScreen;
 import ru.fozeton.diamondchat.gui.widgets.DropdownButtonWidget;
@@ -29,10 +33,10 @@ import java.util.Map;
 public class ChatScreenMixin extends Screen {
     @Unique
     private final AiStyleTextConfig styleTextConfig = ChatConfigManager.getInstance().getTextStyleConfig();
-
     @Unique
     private final MacrosConfig config = ChatConfigManager.getInstance().getMacrosConfig();
-
+    @Shadow
+    protected EditBox input;
     @Unique
     private TabButtonWidget macrosButton;
 
@@ -57,7 +61,8 @@ public class ChatScreenMixin extends Screen {
         int gap = 54;
 
         Minecraft instance = Minecraft.getInstance();
-        this.macrosButton = new TabButtonWidget(x, y, 50, h,
+        this.macrosButton = new TabButtonWidget(
+                x, y, 50, h,
                 Component.literal("Macros"),
                 () -> {
                     config.setEnabled(!config.isEnabled());
@@ -77,25 +82,49 @@ public class ChatScreenMixin extends Screen {
             ChannelsConfig.ChannelSettings channelSettings = channelsConfig.getChannels().get(channelId);
             if (channelSettings == null) continue;
 
-            this.chats.addItem(channelId, () -> {
-                boolean visibility = !channelSettings.isVisible();
-                ChatManagerCore.EVENT_BUS.activate(new ChannelVisibilityChangedEvent(channelId, visibility));
-            }, channelSettings::isVisible);
+            this.chats.addItem(
+                    channelId, () -> {
+                        boolean visibility = !channelSettings.isVisible();
+                        ChatManagerCore.EVENT_BUS.activate(new ChannelVisibilityChangedEvent(channelId, visibility));
+                    }, channelSettings::isVisible
+            );
         }
 
-        this.calculatorButton = new TabButtonWidget(x + gap * 2, y, 80, h,
+        this.calculatorButton = new TabButtonWidget(
+                x + gap * 2, y, 80, h,
                 Component.literal("Калькулятор"),
                 () -> instance.setScreen(new CalculatorScreen()),
                 null
         );
 
-        this.aiStyleText = new DropdownButtonWidget(instance.getWindow().getGuiScaledWidth() - 102, y, 100, h,
-                Component.literal("Стиль текста"));
+        this.aiStyleText = new DropdownButtonWidget(
+                instance.getWindow().getGuiScaledWidth() - 102, y, 100, h,
+                Component.literal("Стиль текста")
+        );
 
 
         for (Map.Entry<String, AiStyleTextConfig.AiStyle> entry : styleTextConfig.getStyles().entrySet()) {
-            this.aiStyleText.addItem(entry.getKey(), () -> ChatManagerCore.EVENT_BUS.activate(new StylizeMessageEvent(entry.getKey())));
+            this.aiStyleText.addItem(
+                    entry.getKey(),
+                    () -> ChatManagerCore.EVENT_BUS.activate(new StylizeMessageEvent(entry.getKey()))
+            );
         }
+    }
+
+    @Inject(method = "init", at = @At("TAIL"))
+    private void chatmanager_core$registerBus(CallbackInfo ci) {
+        ChatManagerCore.EVENT_BUS.register(this);
+    }
+
+    @Inject(method = "removed", at = @At("HEAD"))
+    private void chatmanager_core$unregisterBus(CallbackInfo ci) {
+        ChatManagerCore.EVENT_BUS.unregister(this);
+    }
+
+    @Unique
+    @EventSubscriber(event = VoskPartialResultEvent.class)
+    public void onSendMessage(VoskPartialResultEvent event) {
+        if(!event.getPartialResult().isBlank()) input.setValue(event.getPartialResult());
     }
 
     @Inject(method = "render", at = @At("TAIL"))

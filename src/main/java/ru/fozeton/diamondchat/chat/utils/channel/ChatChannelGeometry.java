@@ -11,20 +11,16 @@ import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReadWriteLock;
 
 @Getter
 @Setter
 public class ChatChannelGeometry {
     public static final int MIN_VIEW_W = 80;
     public static final int MIN_VIEW_H = 40;
-
     private final ChatChannel channel;
     private final ChannelsConfig.ChannelSettings settings;
-    private final ReadWriteLock lock;
     private final Map<String, ChatChannelView.ChatLine> chatMessages;
     private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
 
@@ -33,12 +29,10 @@ public class ChatChannelGeometry {
     public ChatChannelGeometry(
             ChatChannel channel,
             ChannelsConfig.ChannelSettings settings,
-            ReadWriteLock lock,
             Map<String, ChatChannelView.ChatLine> chatMessages
     ) {
         this.channel = channel;
         this.settings = settings;
-        this.lock = lock;
         this.chatMessages = chatMessages;
         this.x = settings.getX();
         this.y = settings.getY();
@@ -55,26 +49,27 @@ public class ChatChannelGeometry {
     }
 
     public void rebuildLines(Font renderer, int newViewWidth) {
-        lock.writeLock().lock();
-        try {
-            Map<String, ChatChannelView.ChatLine> rebuilt = new LinkedHashMap<>();
-            for (ChatChannelView.ChatLine cl : chatMessages.values()) {
-                Message msg = channel.getMessages().stream()
-                        .filter(m -> m.getId().equals(cl.message().getId()))
-                        .findFirst().orElse(null);
-                if (msg == null) {
-                    rebuilt.put(cl.message().getId(), cl);
-                    continue;
-                }
-                Component text = settings.isUseColorRemapper() ? colorRemapper.remap(msg.getContent()) : msg.getContent();
-                rebuilt.put(cl.message().getId(),
-                        new ChatChannelView.ChatLine(new ArrayList<>(renderer.split(text, newViewWidth)), cl.message(), cl.timestamp()));
+        Map<String, ChatChannelView.ChatLine> rebuilt = new LinkedHashMap<>();
+        for (ChatChannelView.ChatLine cl : chatMessages.values()) {
+            Message msg = channel.getMessages().stream()
+                    .filter(m -> m.getId().equals(cl.message().getId()))
+                    .findFirst().orElse(null);
+            if (msg == null) {
+                rebuilt.put(cl.message().getId(), cl);
+                continue;
             }
-            chatMessages.clear();
-            chatMessages.putAll(rebuilt);
-        } finally {
-            lock.writeLock().unlock();
+            Component text = settings.isUseColorRemapper() ? colorRemapper.remap(msg.getContent()) : msg.getContent();
+            rebuilt.put(
+                    cl.message().getId(),
+                    new ChatChannelView.ChatLine(
+                            renderer.split(text, newViewWidth),
+                            cl.message(),
+                            cl.timestamp()
+                    )
+            );
         }
+        chatMessages.clear();
+        chatMessages.putAll(rebuilt);
     }
 
     public void persistDimensions() {

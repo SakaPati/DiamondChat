@@ -22,20 +22,21 @@ import ru.fozeton.diamondchat.chat.utils.channel.*;
 import ru.fozeton.diamondchat.utils.notify.Notification;
 
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.SequencedMap;
 
 public class ChatChannelView {
     private final ChatChannel channel;
     private final ChatChannelMessageHandler messageHandler;
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    private final Map<String, ChatLine> chatMessages = new LinkedHashMap<>();
+    private final SequencedMap<String, ChatLine> chatMessages = new LinkedHashMap<>();
     private final ChannelsConfig config;
     private final ChannelsConfig.ChannelSettings settings;
     private final ChatChannelGeometry geometry;
     private final ChatChannelScrollHandler scrollHandler;
     private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
+    private final ChatMetrics metrics = ChatMetrics.getInstance();
 
     public ChatChannelView(ChatChannel channel) {
         this.channel = channel;
@@ -48,13 +49,24 @@ public class ChatChannelView {
             throw new RuntimeException("Config settings for channel '" + channel.getId() + "' not found!");
 
 
-        ChatChannelGeometry geometry = new ChatChannelGeometry(channel, settings, lock, chatMessages);
+        ChatChannelGeometry geometry = new ChatChannelGeometry(channel, settings, chatMessages);
         this.geometry = geometry;
         ChatChannelDragHandler dragHandler = new ChatChannelDragHandler(settings, geometry);
         ChatChannelEditOverlay editOverlay = dragHandler.getEditOverlay();
-        ChatChannelScrollHandler scrollHandler = new ChatChannelScrollHandler(settings, chatMessages.values(), dragHandler, lock, geometry, editOverlay);
+        ChatChannelScrollHandler scrollHandler = new ChatChannelScrollHandler(
+                settings,
+                chatMessages.values(),
+                geometry
+        );
         this.scrollHandler = scrollHandler;
-        this.messageHandler = new ChatChannelMessageHandler(channel, config, chatMessages.values(), dragHandler, geometry, lock, scrollHandler);
+        this.messageHandler = new ChatChannelMessageHandler(
+                channel,
+                config,
+                chatMessages.values(),
+                dragHandler,
+                geometry,
+                scrollHandler
+        );
 
         DiamondChat.EVENT_BUS.register(messageHandler);
         DiamondChat.EVENT_BUS.register(scrollHandler);
@@ -101,48 +113,43 @@ public class ChatChannelView {
                 int skippedLines = 0;
                 String clickedMessageId = null;
 
-                lock.readLock().lock();
-                try {
-                    for (ChatLine chatLine : chatMessages.values()) {
-                        List<FormattedCharSequence> lines = chatLine.texts();
+                for (ChatLine chatLine : chatMessages.values()) {
+                    List<FormattedCharSequence> lines = chatLine.texts();
 
-                        for (int j = lines.size() - 1; j >= 0; j--) {
-                            if (skippedLines < (int) scrollHandler.getScrollOffset()) {
-                                skippedLines++;
-                                continue;
-                            }
-
-                            currentY -= renderer.lineHeight + 3;
-                            renderedLinesCount++;
-
-                            if (currentY < y || (renderedLinesCount > maxVisible)) break;
-
-                            int minX = x - 10;
-                            int maxX = x + viewWidth;
-                            int minY = currentY - 3;
-                            int maxY = currentY + renderer.lineHeight;
-
-                            if (mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY) {
-                                clickedMessageId = chatLine.message().getId();
-                                break;
-                            }
+                    for (int j = lines.size() - 1; j >= 0; j--) {
+                        if (skippedLines < (int) scrollHandler.getScrollOffset()) {
+                            skippedLines++;
+                            continue;
                         }
-                        if (currentY < y || renderedLinesCount > maxVisible || clickedMessageId != null) break;
-                    }
 
-                    if (clickedMessageId != null) {
-                        final String targetId = clickedMessageId;
-                        channel.getMessages().stream()
-                                .filter(m -> m.getId().equals(targetId))
-                                .findFirst()
-                                .ifPresent(message -> {
-                                    String plainText = message.getContent().getString();
-                                    client.keyboardHandler.setClipboard(plainText);
-                                    Notification.showInfo("Сообщение скопировано успешно!", null);
-                                });
+                        currentY -= renderer.lineHeight + 3;
+                        renderedLinesCount++;
+
+                        if (currentY < y || (renderedLinesCount > maxVisible)) break;
+
+                        int minX = x - 10;
+                        int maxX = x + viewWidth;
+                        int minY = currentY - 3;
+                        int maxY = currentY + renderer.lineHeight;
+
+                        if (mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY) {
+                            clickedMessageId = chatLine.message().getId();
+                            break;
+                        }
                     }
-                } finally {
-                    lock.readLock().unlock();
+                    if (currentY < y || renderedLinesCount > maxVisible || clickedMessageId != null) break;
+                }
+
+                if (clickedMessageId != null) {
+                    final String targetId = clickedMessageId;
+                    channel.getMessages().stream()
+                            .filter(m -> m.getId().equals(targetId))
+                            .findFirst()
+                            .ifPresent(message -> {
+                                String plainText = message.getContent().getString();
+                                client.keyboardHandler.setClipboard(plainText);
+                                Notification.showInfo("Сообщение скопировано успешно!", null);
+                            });
                 }
             }
         }
@@ -155,31 +162,29 @@ public class ChatChannelView {
         Minecraft client = Minecraft.getInstance();
         Font renderer = client.font;
         Message message = event.getMessage();
-        int viewHeight = geometry.getViewHeight();
         int viewWidth = geometry.getViewWidth();
 
-        lock.writeLock().lock();
-        try {
-            Component newText = settings.isUseColorRemapper() ? colorRemapper.remap(message.getContent()) : message.getContent();
-            int newLinesCount = renderer.split(newText, viewWidth).size();
+        Component text = settings.isUseColorRemapper() ? colorRemapper.remap(message.getContent()) : message.getContent();
+        List<FormattedCharSequence> splitLines = renderer.split(text, viewWidth).reversed();
 
-            chatMessages.clear();
-            for (Message msg : channel.getMessages()) {
-                Component text = settings.isUseColorRemapper() ? colorRemapper.remap(msg.getContent()) : msg.getContent();
-                msg.getMetadata().put("channelId", event.getChannel().getId());
-                chatMessages.put(msg.getId(), new ChatChannelView.ChatLine(renderer.split(text, viewWidth), msg, msg.getTimestamp()));
-            }
+        ChatLine newLine = new ChatLine(splitLines, message, message.getTimestamp());
+        chatMessages.putFirst(message.getId(), newLine);
 
-            if (settings.isAutoScroll() || !(client.screen instanceof ChatScreen)) {
-                scrollHandler.setScrollOffset(0);
-            } else {
-                int linesInView = viewHeight / (renderer.lineHeight + 3);
-                int totalLines = chatMessages.values().stream().mapToInt(l -> l.texts().size()).sum();
-                int maxScroll = Math.max(0, totalLines - linesInView);
-                scrollHandler.setScrollOffset(Math.clamp((int) (scrollHandler.getScrollOffset() + newLinesCount), 0, maxScroll));
-            }
-        } finally {
-            lock.writeLock().unlock();
+        while (chatMessages.size() > channel.getMaxHistoryMessage()) chatMessages.pollLastEntry();
+
+        int lineStep = renderer.lineHeight + 3;
+        int newLinesCount = metrics.getLineSlots(newLine, lineStep);
+
+        if (settings.isAutoScroll() || !(client.screen instanceof ChatScreen)) scrollHandler.setScrollOffset(0);
+        else {
+            int linesInView = geometry.getViewHeight() / lineStep;
+            int totalLines = metrics.getTotalLineSlots(chatMessages.values(), lineStep);
+            int maxScroll = Math.max(0, totalLines - linesInView);
+            scrollHandler.setScrollOffset(Math.clamp(
+                    (int) (scrollHandler.getScrollOffset() + newLinesCount),
+                    0,
+                    maxScroll
+            ));
         }
     }
 
@@ -200,22 +205,19 @@ public class ChatChannelView {
         Font renderer = client.font;
         int viewWidth = geometry.getViewWidth();
 
-        lock.writeLock().lock();
-        try {
-            Component updatedContent = message.getMutContent()
-                    .append(Component.literal(" (x" + message.getStack() + ")")
-                            .withColor(Long.decode(settings.getMessageStackColor()).intValue()));
-            message.setContent(updatedContent);
+        Component updatedContent = message.getMutContent()
+                .append(Component.literal(" (x" + message.getStack() + ")")
+                                .withColor(Long.decode(settings.getMessageStackColor()).intValue()));
+        message.setContent(updatedContent);
 
-            Component text = settings.isUseColorRemapper() ? colorRemapper.remap(updatedContent) : updatedContent;
-            chatMessages.put(message.getId(), new ChatLine(
-                    new ArrayList<>(renderer.split(text, viewWidth)),
-                    message,
-                    message.getTimestamp()
-            ));
-        } finally {
-            lock.writeLock().unlock();
-        }
+        Component text = settings.isUseColorRemapper() ? colorRemapper.remap(updatedContent) : updatedContent;
+        chatMessages.put(
+                message.getId(), new ChatLine(
+                        renderer.split(text, viewWidth),
+                        message,
+                        message.getTimestamp()
+                )
+        );
     }
 
     public record ChatLine(List<FormattedCharSequence> texts, Message message, Instant timestamp) {

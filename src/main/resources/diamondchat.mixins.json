@@ -6,7 +6,8 @@
   "client": [
     "MinecraftMixin",
     "chat.ChatHudRender",
-    "chat.ChatScreenMixin"
+    "chat.ChatScreenMixin",
+    "chat.CommandSuggestionsMixin"
   ],
   "injectors": {
     "defaultRequire": 1
