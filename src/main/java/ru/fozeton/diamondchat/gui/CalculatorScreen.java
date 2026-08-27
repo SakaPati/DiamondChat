@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import ru.dargen.evoplus.api.EvoPlusApi;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.diamondchat.configs.LevelsConfig;
 
@@ -18,7 +19,11 @@ public class CalculatorScreen extends Screen {
     private static final int COL_PURPLE = 0xFFa78bfa;
     private static final int COL_LIGHT = 0xFFc8c4f0;
     private static final int COL_HEADER = 0xFF9d9bb8;
-    private final LevelsConfig config = ChatConfigManager.getInstance().loadResource(LevelsConfig.class, "diamondchat", "assets/data/");
+    private final LevelsConfig config = ChatConfigManager.getInstance().loadResource(
+            LevelsConfig.class,
+            "diamondchat",
+            "assets/data/"
+    );
     private EditBox inpCur;
     private EditBox inpTgt;
     private String resDiff = "—";
@@ -95,7 +100,8 @@ public class CalculatorScreen extends Screen {
 
             resDiff = (tgt - cur) + " ур.";
             resMoney = formatNum(totalMoney);
-            resBlocks = formatNum(tgtData.getBlocks());
+            resBlocks = EvoPlusApi.getServer().getId() == 2
+                    ? formatNum((long) (tgtData.getBlocks() / 1.5)) : formatNum(tgtData.getBlocks());
         } catch (NumberFormatException e) {
             resetResults("Введите числа");
         }
