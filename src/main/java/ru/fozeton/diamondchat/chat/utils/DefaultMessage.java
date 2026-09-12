@@ -12,9 +12,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DefaultMessage implements ChatMessageParser {
-    private final Pattern universalPattern = Pattern.compile("(?<=\\s)[A-Za-z0-9_]{3,16}(?=[^:\\n]*:)");
-    private final Pattern INVISIBLE_CHARS = Pattern.compile("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]");
-    private final Pattern COLOR_CODES = Pattern.compile("§.");
+    private static final Pattern INVISIBLE_CHARS = Pattern.compile("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]");
+    private static final Pattern COLOR_CODES = Pattern.compile("§.");
+    private final Pattern universalPattern = Pattern.compile("(?<=\\s)\\w{3,16}(?=[^:\\n]*:)");
 
     @Override
     public Message parseSystemChat(ClientboundSystemChatPacket packet) {

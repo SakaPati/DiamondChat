@@ -24,104 +24,116 @@ import java.util.List;
 public class NotificationManager {
     @Getter
     private static final NotificationManager instance = new NotificationManager();
-    private static final float titleScale = 1.4f;
-    private static final float messageScale = 1.2f;
+    private static final float TITLE_SCALE = 1.4f;
+    private static final float MESSAGE_SCALE = 1.2f;
     private static final long ANIMATION_DURATION = 150;
     private final List<ActiveNotification> activeNotifications = new ArrayList<>();
 
     public NotificationManager() {
         super();
-        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-            ScreenEvents.afterRender(screen).register((s, drawContext, mouseX, mouseY, tickDelta) -> {
-                renderNotifications(drawContext, client);
-            });
-        });
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> ScreenEvents.afterRender(screen).register(
+                (s, drawContext, mouseX, mouseY, tickDelta) -> renderNotifications(drawContext, client)));
 
         HudLayerRegistrationCallback.EVENT.register(layeredDrawer ->
-                layeredDrawer.attachLayerAfter(
-                        IdentifiedLayer.SUBTITLES,
-                        ResourceLocation.fromNamespaceAndPath("moderation", "notification"),
-                        (drawContext, tickCounter) -> {
-                            if (Minecraft.getInstance().screen == null) {
-                                renderNotifications(drawContext, Minecraft.getInstance());
-                            }
-                        }
-                ));
+                                                            layeredDrawer.attachLayerAfter(
+                                                                    IdentifiedLayer.SUBTITLES,
+                                                                    ResourceLocation.fromNamespaceAndPath(
+                                                                            "moderation",
+                                                                            "notification"
+                                                                    ),
+                                                                    (drawContext, tickCounter) -> {
+                                                                        if (Minecraft.getInstance().screen == null) {
+                                                                            renderNotifications(
+                                                                                    drawContext,
+                                                                                    Minecraft.getInstance()
+                                                                            );
+                                                                        }
+                                                                    }
+                                                            ));
         DiamondChat.EVENT_BUS.register(this);
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    private void renderNotifications(GuiGraphics GuiGraphics, Minecraft client) {
+    private void renderNotifications(GuiGraphics graphics, Minecraft client) {
         activeNotifications.removeIf(ActiveNotification::isFullyExpired);
         if (activeNotifications.isEmpty()) return;
 
         Font font = client.font;
 
-        int windowWidth = GuiGraphics.guiWidth();
+        int windowWidth = graphics.guiWidth();
         int currentY = 10;
         int spacing = 5;
 
-        double mouseX = client.mouseHandler.xpos() * (double) windowWidth / (double) client.getWindow().getWidth();
-        double mouseY = client.mouseHandler.ypos() * (double) GuiGraphics.guiHeight() / (double) client.getWindow().getHeight();
+        double mouseX = client.mouseHandler.xpos() * windowWidth / client.getWindow().getWidth();
+        double mouseY = client.mouseHandler.ypos() * graphics.guiHeight() / client.getWindow().getHeight();
 
-        GuiGraphics.pose().pushPose();
-        GuiGraphics.pose().translate(0, 0, 5000f);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 5000f);
 
         for (ActiveNotification active : activeNotifications) {
             float animationScale = getAnimationScale(active);
 
             RenderGeometry geo = active.calculateGeometry(font, animationScale, windowWidth, currentY);
 
-            boolean isHovered = mouseX >= geo.x() && mouseX <= (geo.x() + geo.width()) && mouseY >= geo.y() && mouseY <= (geo.y() + geo.height());
-            int backgroundColor = (isHovered && active.action != null) ? 0xFF1e1e2a : 0xFF18181f;
-            int borderColor = (isHovered && active.action != null) ? 0xFF7c6ef5 : 0xFF3a2e6e;
+            boolean isHovered = mouseX >= geo.x() && mouseX <= (geo.x() + geo.width()) && mouseY >= geo.y() &&
+                                mouseY <= (geo.y() + geo.height());
+            boolean clickable = isHovered && active.action != null;
+            int backgroundColor = clickable ? 0xFF1e1e2a : 0xFF18181f;
+            int borderColor = clickable ? 0xFF7c6ef5 : 0xFF3a2e6e;
             int accentColor;
             int titleColor;
             int messageColor = 0xFF6b6b88;
 
-            switch (active.type) {
-                case SUCCESS -> {
-                    accentColor = (isHovered && active.action != null) ? 0xFF34d68e : 0xFF2aaa72;
-                    titleColor = (isHovered && active.action != null) ? 0xFF34d68e : 0xFF2aaa72;
-                }
-                case ERROR -> {
-                    accentColor = (isHovered && active.action != null) ? 0xFFe84d78 : 0xFFc04060;
-                    titleColor = (isHovered && active.action != null) ? 0xFFe84d78 : 0xFFc04060;
-                }
-                case WARN -> {
-                    accentColor = (isHovered && active.action != null) ? 0xFFf0c830 : 0xFFc4a020;
-                    titleColor = (isHovered && active.action != null) ? 0xFFf0c830 : 0xFFc4a020;
-                }
-                default -> {
-                    accentColor = (isHovered && active.action != null) ? 0xFFa78bfa : 0xFF7c6ef5;
-                    titleColor = (isHovered && active.action != null) ? 0xFFede9fe : 0xFFd4d0f5;
-                }
-            }
+            int[] colors = switch (active.type) {
+                case SUCCESS -> clickable
+                        ? new int[]{0xFF34d68e, 0xFF34d68e}
+                        : new int[]{0xFF2aaa72, 0xFF2aaa72};
+                case ERROR -> clickable
+                        ? new int[]{0xFFe84d78, 0xFFe84d78}
+                        : new int[]{0xFFc04060, 0xFFc04060};
 
-            GuiGraphics.fill(geo.x(), geo.y(), geo.x() + geo.width(), geo.y() + geo.height(), backgroundColor);
-            GuiGraphics.renderOutline(geo.x(), geo.y(), geo.width(), geo.height(), borderColor);
-            GuiGraphics.fill(geo.x() + 1, geo.y(), geo.x() - 2, geo.y() + geo.height(), accentColor);
+                case WARN -> clickable
+                        ? new int[]{0xFFf0c830, 0xFFf0c830}
+                        : new int[]{0xFFc4a020, 0xFFc4a020};
 
-            GuiGraphics.pose().pushPose();
-            GuiGraphics.pose().translate(geo.x() + 3, geo.y() + 5, 0);
-            GuiGraphics.pose().scale(titleScale * animationScale, titleScale * animationScale, 1.0f);
-            GuiGraphics.drawString(font, geo.title(), 5, 2, titleColor, false);
-            GuiGraphics.pose().popPose();
+                default -> clickable
+                        ? new int[]{0xFFa78bfa, 0xFFede9fe}
+                        : new int[]{0xFF7c6ef5, 0xFFd4d0f5};
+            };
 
-            GuiGraphics.pose().pushPose();
-            GuiGraphics.pose().translate(geo.x(), geo.y() + 5, 0);
-            GuiGraphics.pose().scale(messageScale * animationScale, messageScale * animationScale, 1.0f);
-            GuiGraphics.drawString(font, geo.message(), 8, 15, messageColor, false);
-            GuiGraphics.pose().popPose();
+            accentColor = colors[0];
+            titleColor = colors[1];
+
+            graphics.fill(geo.x(), geo.y(), geo.x() + geo.width(), geo.y() + geo.height(), backgroundColor);
+            graphics.renderOutline(geo.x(), geo.y(), geo.width(), geo.height(), borderColor);
+            graphics.fill(geo.x() + 1, geo.y(), geo.x() - 2, geo.y() + geo.height(), accentColor);
+
+            graphics.pose().pushPose();
+            graphics.pose().translate(geo.x() + 3, geo.y() + 5, 0);
+            graphics.pose().scale(TITLE_SCALE * animationScale, TITLE_SCALE * animationScale, 1.0f);
+            graphics.drawString(font, geo.title(), 5, 2, titleColor, false);
+            graphics.pose().popPose();
+
+            graphics.pose().pushPose();
+            graphics.pose().translate(geo.x(), geo.y() + 5, 0);
+            graphics.pose().scale(MESSAGE_SCALE * animationScale, MESSAGE_SCALE * animationScale, 1.0f);
+            graphics.drawString(font, geo.message(), 8, 15, messageColor, false);
+            graphics.pose().popPose();
 
             float progress = active.getProgress();
             int progressWidth = (int) (geo.width() * progress);
-            GuiGraphics.fill(geo.x(), geo.y() + geo.height(), geo.x() + progressWidth, geo.y() + geo.height() - 1, accentColor);
+            graphics.fill(
+                    geo.x(),
+                    geo.y() + geo.height(),
+                    geo.x() + progressWidth,
+                    geo.y() + geo.height() - 1,
+                    accentColor
+            );
 
             if (geo.height() > 0) currentY += geo.height() + spacing;
         }
 
-        GuiGraphics.pose().popPose();
+        graphics.pose().popPose();
     }
 
     private float getAnimationScale(ActiveNotification active) {
@@ -134,7 +146,7 @@ public class NotificationManager {
             timePassed = System.currentTimeMillis() - active.startTime;
             progress = (float) timePassed / ANIMATION_DURATION;
         }
-        return Math.max(0.0f, Math.min(1.0f, progress));
+        return Math.clamp(progress, 0f, 1f);
     }
 
     @EventSubscriber(event = NotificationEvent.class)
@@ -148,12 +160,12 @@ public class NotificationManager {
         if (activeNotifications.isEmpty()) return;
         Minecraft client = Minecraft.getInstance();
 
-        Font Font = client.font;
+        Font font = client.font;
         int windowWidth = client.getWindow().getGuiScaledWidth();
         int windowHeight = client.getWindow().getGuiScaledHeight();
 
-        double mouseX = client.mouseHandler.xpos() * (double) windowWidth / (double) client.getWindow().getScreenWidth();
-        double mouseY = client.mouseHandler.ypos() * (double) windowHeight / (double) client.getWindow().getScreenHeight();
+        double mouseX = client.mouseHandler.xpos() * windowWidth / client.getWindow().getScreenWidth();
+        double mouseY = client.mouseHandler.ypos() * windowHeight / client.getWindow().getScreenHeight();
 
         int currentY = 10;
         int spacing = 5;
@@ -162,12 +174,11 @@ public class NotificationManager {
             if (active.closing || active.action == null) continue;
 
             float animationScale = getAnimationScale(active);
-            RenderGeometry geo = active.calculateGeometry(Font, animationScale, windowWidth, currentY);
-            if (mouseX >= geo.x() && mouseX <= (geo.x() + geo.width()) && mouseY >= geo.y() && mouseY <= (geo.y() + geo.height())) {
+            RenderGeometry geo = active.calculateGeometry(font, animationScale, windowWidth, currentY);
+            if (mouseX >= geo.x() && mouseX <= (geo.x() + geo.width()) && mouseY >= geo.y() &&
+                mouseY <= (geo.y() + geo.height())) {
                 Notification notification = active.notification;
-                if (notification.getAction() != null) {
-                    client.execute(notification.getAction());
-                }
+                if (notification.getAction() != null) client.execute(notification.getAction());
                 active.forceClose();
                 break;
             }
@@ -198,16 +209,18 @@ public class NotificationManager {
         }
 
         public RenderGeometry calculateGeometry(
-                Font Font,
+                Font font,
                 float animationScale,
                 int windowWidth,
                 int currentY
         ) {
-            Component title = textFont == null ? Component.literal(notification.getTitle()) : Component.literal(notification.getTitle()).setStyle(Style.EMPTY.withFont(textFont));
-            Component message = textFont == null ? Component.literal(notification.getMessage()) : Component.literal(notification.getMessage()).setStyle(Style.EMPTY.withFont(textFont));
+            Component title = textFont == null ? Component.literal(notification.getTitle()) : Component.literal(
+                    notification.getTitle()).setStyle(Style.EMPTY.withFont(textFont));
+            Component message = textFont == null ? Component.literal(notification.getMessage()) : Component.literal(
+                    notification.getMessage()).setStyle(Style.EMPTY.withFont(textFont));
 
-            float scaledTitleWidth = Font.width(title) * titleScale;
-            float scaledMessageWidth = Font.width(message) * messageScale;
+            float scaledTitleWidth = font.width(title) * TITLE_SCALE;
+            float scaledMessageWidth = font.width(message) * MESSAGE_SCALE;
             float maxTextWidth = Math.max(scaledTitleWidth, scaledMessageWidth);
 
             int width = (int) ((maxTextWidth + 20) * animationScale);
@@ -238,7 +251,7 @@ public class NotificationManager {
         public float getProgress() {
             long timeLeft = this.expiryTime - System.currentTimeMillis();
             float progress = (float) timeLeft / this.notification.getDuration().toMillis();
-            return Math.max(0.0f, Math.min(1.0f, progress));
+            return Math.clamp(progress, 0f, 1f);
         }
     }
 

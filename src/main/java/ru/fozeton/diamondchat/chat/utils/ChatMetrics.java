@@ -3,39 +3,59 @@ package ru.fozeton.diamondchat.chat.utils;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import net.minecraft.client.gui.Font;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import ru.fozeton.chatmanager.messages.MessageType;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ChatMetrics {
+    public static final int GIF_SPACING = 3;
     @Getter
     private static final ChatMetrics instance = new ChatMetrics();
-    private static final Pattern GIF_PATTERN = Pattern.compile(":\\d{15,19}:");
+    public static final Pattern GIF_PATTERN = Pattern.compile(":\\d{15,19}:");
 
-    public int getLineSlots(ChatChannelView.ChatLine chatLine, int lineStep) {
+    public int getLineSlots(ChatChannelView.ChatLine chatLine, Font renderer, int viewWidth) {
         if (chatLine.message().getType() == MessageType.ANIMATED) {
             Matcher matcher = GIF_PATTERN.matcher(chatLine.message().getPlainText());
             if (matcher.find()) {
-                String gifId = matcher.group().replaceAll(":", "");
+                String gifId = matcher.group().replace(":", "");
                 GifTexture gif = GifTexture.get(gifId);
                 int gifHeight = gif.getHeight() / 2;
 
-                int linesNeeded = Math.max(1, (int) Math.ceil((double) gifHeight / lineStep));
-                int totalBlockHeight = linesNeeded * lineStep + 11;
+                int lineStep = renderer.lineHeight + 3;
+                Component cleanedContent = stripGifPattern(chatLine.message().getContent());
+                int textLines = renderer.split(cleanedContent, viewWidth).size();
+                int textBlockHeight = textLines * lineStep;
 
-                return (int) Math.ceil((double) totalBlockHeight / lineStep);
+                return textBlockHeight + gifHeight + GIF_SPACING;
             }
         }
-        return chatLine.texts().size();
+        return chatLine.texts().size() * 12;
     }
 
-    public int getTotalLineSlots(Collection<ChatChannelView.ChatLine> chatLines, int lineStep) {
+    public int getTotalPixels(Collection<ChatChannelView.ChatLine> chatLines, Font renderer, int viewWidth) {
         int total = 0;
-        for (ChatChannelView.ChatLine line : chatLines) total += getLineSlots(line, lineStep);
+        for (ChatChannelView.ChatLine line : chatLines) total += getLineSlots(line, renderer, viewWidth);
 
         return total;
+    }
+
+    public Component stripGifPattern(Component component) {
+        MutableComponent result = Component.empty();
+        component.visit(
+                (style, text) -> {
+                    String filtered = GIF_PATTERN.matcher(text).replaceAll("");
+                    if (!filtered.isEmpty()) result.append(Component.literal(filtered).setStyle(style));
+                    return Optional.empty();
+                }, Style.EMPTY
+        );
+        return result;
     }
 }

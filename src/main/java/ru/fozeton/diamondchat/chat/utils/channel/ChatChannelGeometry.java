@@ -53,7 +53,8 @@ public class ChatChannelGeometry {
         for (ChatChannelView.ChatLine cl : chatMessages.values()) {
             Message msg = channel.getMessages().stream()
                     .filter(m -> m.getId().equals(cl.message().getId()))
-                    .findFirst().orElse(null);
+                    .findFirst()
+                    .orElse(null);
             if (msg == null) {
                 rebuilt.put(cl.message().getId(), cl);
                 continue;

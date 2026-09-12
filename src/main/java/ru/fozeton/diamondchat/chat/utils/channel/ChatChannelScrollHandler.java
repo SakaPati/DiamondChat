@@ -10,7 +10,6 @@ import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.InputEvent;
-import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.chat.utils.ChatMetrics;
 
@@ -40,27 +39,28 @@ public class ChatChannelScrollHandler {
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    public void render(GuiGraphics context, Font renderer, boolean isChatOpen) {
+    public void render(GuiGraphics context, boolean isChatOpen) {
         if (!settings.isVisibleScroll() || !isChatOpen) return;
 
-        int viewWidth = geometry.getViewWidth();
-        int viewHeight = geometry.getViewHeight();
         int x = geometry.getX();
         int y = geometry.getY();
+        int viewWidth = geometry.getViewWidth();
+        int viewHeight = geometry.getViewHeight();
 
-        int lineStep = renderer.lineHeight + 3;
-        int linesInView = viewHeight / lineStep;
-        int totalLines = metrics.getTotalLineSlots(chatLines, lineStep);
+        Font renderer = Minecraft.getInstance().font;
+
+        int linesInView = (int) (viewHeight / 1.4);
+        int totalLines = metrics.getTotalPixels(chatLines, renderer, viewWidth);
 
         if (totalLines <= linesInView) return;
 
         int paddingTop = 10;
         int paddingBot = 10;
         int trackH = viewHeight - paddingTop - paddingBot;
-        int scrollBarH = Math.max(10, (int) ((float) trackH * linesInView / totalLines));
+        int scrollBarH = Math.max(10, (int) ((float) trackH * viewHeight / totalLines));
         int maxScroll = trackH - scrollBarH;
         int scrollBarY =
-                y + paddingTop + (int) (maxScroll * (1.0 - scrollOffset / Math.max(1, totalLines - linesInView)));
+                y + paddingTop + (int) (maxScroll * (1.0 - scrollOffset / Math.max(1, totalLines - viewHeight + 3)));
 
         context.fill(x + viewWidth - 2, scrollBarY, x + viewWidth - 4, scrollBarY + scrollBarH, scrollHex);
     }
@@ -73,36 +73,18 @@ public class ChatChannelScrollHandler {
 
         int x = geometry.getX();
         int y = geometry.getY();
-        int vw = geometry.getViewWidth();
-        int vh = geometry.getViewHeight();
-
-        if (mouseX < x || mouseX > x + vw || mouseY < y || mouseY > y + vh) return;
+        int viewWidth = geometry.getViewWidth();
+        int viewHeight = geometry.getViewHeight();
 
         Font renderer = Minecraft.getInstance().font;
 
-        int lineStep = renderer.lineHeight + 3;
-        int linesInView = vh / lineStep;
-        if (isPressedShift || isScrollingOverGif((int) scrollOffset, lineStep)) vertical *= 5;
+        if (mouseX < x || mouseX > x + viewWidth || mouseY < y || mouseY > y + viewHeight) return;
 
-        int totalLines = metrics.getTotalLineSlots(chatLines, lineStep);
-        int maxScroll = Math.max(0, totalLines - linesInView);
-        scrollOffset = Math.clamp((int) (scrollOffset + vertical), 0, maxScroll);
-    }
+        if (isPressedShift) vertical *= 5;
 
-    private boolean isScrollingOverGif(int scrollOffset, int lineStep) {
-        int accumulated = 0;
-        for (ChatChannelView.ChatLine chatLine : chatLines) {
-            int slots = metrics.getLineSlots(chatLine, lineStep);
-            int rangeStart = accumulated;
-            int rangeEnd = accumulated + slots;
-
-            if (scrollOffset >= rangeStart && scrollOffset < rangeEnd) {
-                return chatLine.message().getType() == MessageType.ANIMATED;
-            }
-
-            accumulated = rangeEnd;
-        }
-        return false;
+        int totalPixels = metrics.getTotalPixels(chatLines, renderer, viewWidth);
+        int maxScroll = Math.max(0, totalPixels - viewHeight + 3);
+        scrollOffset = Math.clamp((int) (scrollOffset + vertical * 12), 0, maxScroll);
     }
 
     @EventSubscriber(event = InputEvent.KeyInputEvent.class)

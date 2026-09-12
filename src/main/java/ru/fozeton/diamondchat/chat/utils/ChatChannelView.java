@@ -38,7 +38,7 @@ public class ChatChannelView {
     private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
     private final ChatMetrics metrics = ChatMetrics.getInstance();
 
-    public ChatChannelView(ChatChannel channel) {
+    public ChatChannelView(ChatChannel channel)  {
         this.channel = channel;
         Objects.requireNonNull(channel, "Channel cannot be null");
 
@@ -172,14 +172,12 @@ public class ChatChannelView {
 
         while (chatMessages.size() > channel.getMaxHistoryMessage()) chatMessages.pollLastEntry();
 
-        int lineStep = renderer.lineHeight + 3;
-        int newLinesCount = metrics.getLineSlots(newLine, lineStep);
+        int newLinesCount = metrics.getLineSlots(newLine, renderer, viewWidth);
 
         if (settings.isAutoScroll() || !(client.screen instanceof ChatScreen)) scrollHandler.setScrollOffset(0);
         else {
-            int linesInView = geometry.getViewHeight() / lineStep;
-            int totalLines = metrics.getTotalLineSlots(chatMessages.values(), lineStep);
-            int maxScroll = Math.max(0, totalLines - linesInView);
+            int totalLines = metrics.getTotalPixels(chatMessages.values(), renderer, viewWidth);
+            int maxScroll = Math.max(0, totalLines - geometry.getViewHeight() + ChatMetrics.GIF_SPACING);
             scrollHandler.setScrollOffset(Math.clamp(
                     (int) (scrollHandler.getScrollOffset() + newLinesCount),
                     0,

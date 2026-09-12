@@ -8,8 +8,10 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import ru.fozeton.chatmanager.ChatManagerCore;
+import ru.fozeton.chatmanager.module.Gif;
 import ru.fozeton.chatmanager.module.gif.McAnimCodec;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,40 +19,62 @@ import java.util.Map;
 public class GifTexture {
     private static final Map<String, GifTexture> CACHE = new HashMap<>();
     private final McAnimCodec.Animation animation;
+    private final Gif gif = Gif.getInstance();
     private final ResourceLocation location;
     private final DynamicTexture texture;
     private final NativeImage image;
     @Getter
-    private final int width, height;
+    private final int width;
+    @Getter
+    private final int height;
     private final int totalDuration;
     private int currentFrameIndex = -1;
     private long animationStartTime = 0;
 
     private GifTexture(String gifId) {
+        this.animation = loadOrDownloadAnimation(gifId);
+        this.width = animation.getWidth();
+        this.height = animation.getHeight();
+
+        this.image = new NativeImage(width, height, false);
+        this.texture = new DynamicTexture(image);
+        this.location = ResourceLocation.fromNamespaceAndPath("diamondchat", "dynamic/" + gifId);
+
+        Minecraft.getInstance().getTextureManager().register(location, texture);
+
+        this.totalDuration = calculateTotalDuration(animation);
+    }
+
+    private McAnimCodec.Animation loadOrDownloadAnimation(String gifId) {
         try {
-            this.animation = McAnimCodec.read(ChatManagerCore.CONFIG_DIR.resolve("cache").resolve(gifId + ".mcanim"));
-            this.width = animation.getWidth();
-            this.height = animation.getHeight();
-
-            this.image = new NativeImage(width, height, false);
-            this.texture = new DynamicTexture(image);
-            this.location = ResourceLocation.fromNamespaceAndPath("diamondchat", "dynamic/" + gifId);
-
-            Minecraft.getInstance().getTextureManager().register(location, texture);
-
-            List<McAnimCodec.Frame> frames = animation.getFrames();
-            if (!frames.isEmpty()) this.totalDuration = frames.getLast().timestamp();
-            else this.totalDuration = 1000;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return readAnimation(gifId);
+        } catch (Exception firstAttempt) {
+            if (!gif.download(gifId)) {
+                throw new RuntimeException("Failed to download gif: " + gifId, firstAttempt);
+            }
+            try {
+                return readAnimation(gifId);
+            } catch (Exception afterDownload) {
+                throw new RuntimeException("Failed to read gif: " + gifId + " after download", afterDownload);
+            }
         }
+    }
+
+    private McAnimCodec.Animation readAnimation(String gifId) throws Exception {
+        Path path = ChatManagerCore.CONFIG_DIR.resolve("cache").resolve(gifId + ".mcanim");
+        return McAnimCodec.read(path);
+    }
+
+    private int calculateTotalDuration(McAnimCodec.Animation animation) {
+        List<McAnimCodec.Frame> frames = animation.getFrames();
+        return frames.isEmpty() ? 1000 : frames.getLast().timestamp();
     }
 
     public static GifTexture get(String gifId) {
         return CACHE.computeIfAbsent(gifId, GifTexture::new);
     }
 
-    public void render(GuiGraphics guiGraphics, int x, int y) {
+    public void render(GuiGraphics guiGraphics, int x, int y, float alpha) {
         List<McAnimCodec.Frame> frames = animation.getFrames();
         if (frames == null || frames.isEmpty()) return;
 
@@ -59,12 +83,7 @@ public class GifTexture {
 
         long elapsedTime = (currentTime - animationStartTime) % totalDuration;
 
-        int targetFrameIndex = 0;
-        for (int i = 0; i < frames.size(); i++) {
-            if (frames.get(i).timestamp() <= elapsedTime) targetFrameIndex = i;
-            else break;
-        }
-
+        int targetFrameIndex = resolveFrameIndex(frames, elapsedTime);
         if (targetFrameIndex != currentFrameIndex) {
             currentFrameIndex = targetFrameIndex;
             uploadBytes(frames.get(currentFrameIndex).rgbaData());
@@ -73,6 +92,9 @@ public class GifTexture {
         int displayWidth = width / 2;
         int displayHeight = height / 2;
 
+        int alphaInt = (int) (alpha * 255.0f) & 0xFF;
+        int color = (alphaInt << 24) | 0x00FFFFFF;
+
         guiGraphics.blit(
                 RenderType::guiTextured,
                 this.location,
@@ -80,18 +102,28 @@ public class GifTexture {
                 0.0F, 0.0F,
                 displayWidth, displayHeight,
                 displayWidth,
-                displayHeight
+                displayHeight,
+                color
         );
     }
 
-    private void uploadBytes(byte[] rgbaBytes) {
-        int width = animation.getWidth();
-        int height = animation.getHeight();
-        if (rgbaBytes.length < width * height * 4) return;
+    private int resolveFrameIndex(List<McAnimCodec.Frame> frames, long elapsedTime) {
+        int targetFrameIndex = 0;
+        for (int i = 0; i < frames.size(); i++) {
+            if (frames.get(i).timestamp() <= elapsedTime) targetFrameIndex = i;
+            else break;
+        }
+        return targetFrameIndex;
+    }
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int index = (y * width + x) * 4;
+    private void uploadBytes(byte[] rgbaBytes) {
+        int animationWidth = animation.getWidth();
+        int animationHeight = animation.getHeight();
+        if (rgbaBytes.length < animationWidth * animationHeight * 4) return;
+
+        for (int y = 0; y < animationHeight; y++) {
+            for (int x = 0; x < animationWidth; x++) {
+                int index = (y * animationWidth + x) * 4;
 
                 int r = rgbaBytes[index] & 0xFF;
                 int g = rgbaBytes[index + 1] & 0xFF;

@@ -17,6 +17,7 @@ import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.PlaySounds;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
+import ru.fozeton.diamondchat.chat.utils.ChatMetrics;
 import ru.fozeton.diamondchat.chat.utils.GifTexture;
 import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;
 
@@ -27,7 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ChatChannelMessageHandler {
-    private static final Pattern GIF_PATTERN = Pattern.compile(":\\d{15,19}:");
+    private final ChatMetrics metrics = ChatMetrics.getInstance();
     private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
     private final PlaySounds sounds = PlaySounds.getInstance();
     private final ChatChannel channel;
@@ -50,7 +51,6 @@ public class ChatChannelMessageHandler {
     private int fadeDurationMs;
     private int maxVisible;
     private int renderedLinesCount;
-    private int skippedLines;
     private Style hoveredStyle;
 
     public ChatChannelMessageHandler(
@@ -91,19 +91,18 @@ public class ChatChannelMessageHandler {
         this.fadeDurationMs = settings.getFadingDuration();
         this.maxVisible = channel.getMaxVisibleMessage();
         this.renderedLinesCount = 0;
-        this.skippedLines = 0;
         this.hoveredStyle = null;
 
         for (ChatChannelView.ChatLine chatLine : chatLines) {
             MessageType type = chatLine.message().getType();
             if (type == MessageType.ANIMATED) {
-                if (gifRender(context, renderer, chatLine, isChatOpen)) break;
+                if (gifRender(context, renderer, mouseX, mouseY, chatLine, isChatOpen)) break;
                 else continue;
             }
             if (textRender(context, renderer, mouseX, mouseY, type, chatLine, isChatOpen)) break;
         }
 
-        if (scrollHandler != null) scrollHandler.render(context, renderer, isChatOpen);
+        if (scrollHandler != null) scrollHandler.render(context, isChatOpen);
         if (dragHandler != null) dragHandler.render(context, renderer, mouseX, mouseY, isChatOpen);
 
         if (hoveredStyle != null && hoveredStyle.getHoverEvent() != null) {
@@ -114,31 +113,36 @@ public class ChatChannelMessageHandler {
     private boolean gifRender(
             GuiGraphics context,
             Font renderer,
+            int mouseX,
+            int mouseY,
             ChatChannelView.ChatLine chatLine,
             boolean isChatOpen
     ) {
-        Matcher matcher = GIF_PATTERN.matcher(chatLine.message().getPlainText());
+        Matcher matcher = ChatMetrics.GIF_PATTERN.matcher(chatLine.message().getPlainText());
         if (!matcher.find()) return false;
 
-        String gifId = matcher.group().replaceAll(":", "");
+        String gifId = matcher.group().replace(":", "");
         GifTexture gif = GifTexture.get(gifId);
         int gifHeight = gif.getHeight() / 2;
 
+        Component cleanedContent = metrics.stripGifPattern(chatLine.message().getContent());
+        List<FormattedCharSequence> cleanedLines = renderer.split(cleanedContent, viewWidth);
+
         int lineStep = renderer.lineHeight + 3;
-        int linesNeeded = Math.max(1, (int) Math.ceil((double) gifHeight / lineStep));
-        int totalBlockHeight = linesNeeded * lineStep;
+        int textBlockHeight = cleanedLines.size() * lineStep;
 
-        int slots = (int) Math.ceil((double) (totalBlockHeight + 11) / lineStep);
+        int gifBlockHeight = textBlockHeight + gifHeight;
+        int totalBlockHeight = gifBlockHeight + ChatMetrics.GIF_SPACING;
 
-        if (scrollHandler != null && skippedLines < (int) scrollHandler.getScrollOffset()) {
-            skippedLines += slots;
-            return false;
-        }
+        int slots = (int) Math.ceil((double) totalBlockHeight / lineStep);
 
-        currentY -= totalBlockHeight + 11;
+        currentY -= totalBlockHeight;
         renderedLinesCount += slots;
 
-        if (currentY < y || (renderedLinesCount > maxVisible && !isChatOpen)) return true;
+        int pixelOffset = (scrollHandler != null) ? (int) scrollHandler.getScrollOffset() : 0;
+        int drawY = currentY + pixelOffset;
+
+        if (drawY + totalBlockHeight < y || (renderedLinesCount > maxVisible && !isChatOpen)) return true;
 
         float alpha = getAlpha(isChatOpen, chatLine, fadeStartMs, fadeDurationMs);
         if (alpha == -1) return true;
@@ -146,28 +150,41 @@ public class ChatChannelMessageHandler {
         int currentStripe = 0xFF7c6ef5;
         int fadedBg = colorRemapper.applyAlpha(baseBg, alpha);
         int fadedStripe = colorRemapper.applyAlpha(currentStripe, alpha);
+        int fadedText = colorRemapper.applyAlpha(0xFFFFFFFF, alpha);
 
-        context.fill(x - 5, currentY - 3, x + viewWidth, currentY + totalBlockHeight + 8, fadedBg);
-        context.fill(x - 5, currentY - 3, x - 7, currentY + totalBlockHeight + 8, fadedStripe);
+        context.enableScissor(x - 7, y, x + viewWidth, y + viewHeight);
 
-        Component cleanedContent = stripGifPattern(chatLine.message().getContent());
-        context.drawString(renderer, cleanedContent.getVisualOrderText(), x, currentY, -1, false);
+        context.fill(x - 5, drawY - 3, x + viewWidth, drawY + gifBlockHeight, fadedBg);
+        context.fill(x - 5, drawY - 3, x - 7, drawY + gifBlockHeight, fadedStripe);
 
-        gif.render(context, x, currentY + totalBlockHeight + 8);
+        int textY = drawY;
+        for (FormattedCharSequence line : cleanedLines) {
+            drawTextLine(context, renderer, line, mouseX, mouseY, textY, fadedText);
+            textY += lineStep;
+        }
 
-        return false;
+        gif.render(context, x, drawY + gifBlockHeight, alpha);
+
+        context.disableScissor();
+
+        return drawY + totalBlockHeight < y || (renderedLinesCount > maxVisible && !isChatOpen);
     }
 
-    private Component stripGifPattern(Component component) {
-        MutableComponent result = Component.empty();
-        component.visit(
-                (style, text) -> {
-                    String filtered = GIF_PATTERN.matcher(text).replaceAll("");
-                    if (!filtered.isEmpty()) result.append(Component.literal(filtered).setStyle(style));
-                    return Optional.empty();
-                }, Style.EMPTY
-        );
-        return result;
+    private void drawTextLine(
+            GuiGraphics context,
+            Font renderer,
+            FormattedCharSequence text,
+            int mouseX,
+            int mouseY,
+            int currentY,
+            int textColor
+    ) {
+        context.drawString(renderer, text, x, currentY, textColor, false);
+
+        if (mouseX >= x && mouseX <= x + viewWidth && mouseY >= currentY &&
+            mouseY <= currentY + renderer.lineHeight) {
+            hoveredStyle = renderer.getSplitter().componentStyleAtWidth(text, mouseX - x);
+        }
     }
 
     private boolean textRender(
@@ -198,16 +215,17 @@ public class ChatChannelMessageHandler {
         float alpha = getAlpha(isChatOpen, chatLine, fadeStartMs, fadeDurationMs);
         if (alpha == -1) return true;
 
-        for (FormattedCharSequence text : lines) {
-            if (scrollHandler != null && skippedLines < (int) scrollHandler.getScrollOffset()) {
-                skippedLines++;
-                continue;
-            }
+        int pixelOffset = (scrollHandler != null) ? (int) scrollHandler.getScrollOffset() : 0;
 
-            currentY -= renderer.lineHeight + 3;
+        context.enableScissor(x - 7, y, x + viewWidth, y + viewHeight);
+
+        for (FormattedCharSequence text : lines) {
+            currentY -= (renderer.lineHeight + 3);
             renderedLinesCount++;
 
-            if (currentY < y || (renderedLinesCount > maxVisible && !isChatOpen)) break;
+            int drawY = currentY + pixelOffset;
+
+            if (drawY < y - renderer.lineHeight || (renderedLinesCount > maxVisible && !isChatOpen)) break;
 
             int currentBg = type == MessageType.MENTIONED ? blinkHex : backgroundColor;
             int currentStripe = type == MessageType.MENTIONED ? 0xFFc4a020 : stripeColor;
@@ -216,17 +234,15 @@ public class ChatChannelMessageHandler {
             int fadedStripe = colorRemapper.applyAlpha(currentStripe, alpha);
             int fadedText = colorRemapper.applyAlpha(0xFFFFFFFF, alpha);
 
-            context.fill(x - 5, currentY - 3, x + viewWidth, currentY + renderer.lineHeight, fadedBg);
-            context.fill(x - 5, currentY - 3, x - 7, currentY + renderer.lineHeight, fadedStripe);
-            context.drawString(renderer, text, x, currentY, fadedText, false);
+            context.fill(x - 5, drawY - 3, x + viewWidth, drawY + renderer.lineHeight, fadedBg);
+            context.fill(x - 5, drawY - 3, x - 7, drawY + renderer.lineHeight, fadedStripe);
 
-            if (isChatOpen && mouseX >= x && mouseX <= x + viewWidth && mouseY >= currentY &&
-                mouseY <= currentY + renderer.lineHeight) {
-                hoveredStyle = renderer.getSplitter().componentStyleAtWidth(text, mouseX - x);
-            }
+            drawTextLine(context, renderer, text, mouseX, mouseY, drawY, fadedText);
         }
 
-        return currentY < y || (renderedLinesCount > maxVisible && !isChatOpen);
+        context.disableScissor();
+
+        return currentY + pixelOffset < y || (renderedLinesCount > maxVisible && !isChatOpen);
     }
 
     private float getAlpha(
