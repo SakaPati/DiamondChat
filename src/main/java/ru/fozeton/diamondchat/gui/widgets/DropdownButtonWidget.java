@@ -2,9 +2,10 @@ package ru.fozeton.diamondchat.gui.widgets;
 
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -46,8 +47,11 @@ public class DropdownButtonWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) return false;
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() != 0) return false;
+
+        double mouseX = event.x();
+        double mouseY = event.y();
 
         if (isMouseOver(mouseX, mouseY)) {
             open = !open;
@@ -75,26 +79,26 @@ public class DropdownButtonWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         boolean hovered = isMouseOver(mouseX, mouseY);
         int border = open ? BORDER_ACTIVE : hovered ? BORDER_HOVER : BORDER_INACTIVE;
         int textColor = open ? TEXT_ACTIVE : hovered ? TEXT_HOVER : TEXT_INACTIVE;
 
         graphics.fill(getX(), getY(), getX() + width, getY() + height, BG);
-        graphics.renderOutline(getX(), getY(), width, height, border);
+        graphics.outline(getX(), getY(), width, height, border);
 
         var font = Minecraft.getInstance().font;
         String label = getMessage().getString() + (open ? " ▲" : " ▼");
         int textX = getX() + (width - font.width(label)) / 2;
         int textY = getY() + (height - 8) / 2;
-        graphics.drawString(font, label, textX, textY, textColor, false);
+        graphics.text(font, label, textX, textY, textColor, false);
 
         if (open && !items.isEmpty()) {
             int iw = getDropdownWidth();
             int startY = getDropdownStartY();
 
             graphics.fill(getX(), startY, getX() + iw, startY + items.size() * ITEM_HEIGHT, BG);
-            graphics.renderOutline(getX(), startY - 1, iw, items.size() * ITEM_HEIGHT + 1, BORDER_ACTIVE);
+            graphics.outline(getX(), startY - 1, iw, items.size() * ITEM_HEIGHT + 1, BORDER_ACTIVE);
 
             for (int i = 0; i < items.size(); i++) {
                 int iy = startY + i * ITEM_HEIGHT;
@@ -112,7 +116,7 @@ public class DropdownButtonWidget extends AbstractWidget {
                 graphics.fill(getX() + 4, dotY - 1, getX() + 6, dotY + 1, dotColor);
 
                 int color = itemHovered ? ITEM_TEXT_HOVER : itemActive ? ITEM_TEXT_ACTIVE : ITEM_TEXT_INACTIVE;
-                graphics.drawString(font, items.get(i).label(),
+                graphics.text(font, items.get(i).label(),
                         getX() + ITEM_PADDING_X + 4,
                         iy + (ITEM_HEIGHT - 8) / 2,
                         color, false);

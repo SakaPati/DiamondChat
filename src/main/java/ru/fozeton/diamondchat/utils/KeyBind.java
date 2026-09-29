@@ -8,6 +8,7 @@ import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.events.InputEvent;
 import ru.fozeton.chatmanager.module.SpeechToText;
+import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.gui.ChatLogScreen;
 import ru.fozeton.diamondchat.utils.enums.KeyBinds;
 
@@ -34,7 +35,7 @@ public class KeyBind {
         int scanCode = InputConstants.UNKNOWN.getValue();
 
         if (KeyBinds.OPEN_CHAT_HISTORY.matches(key, scanCode)) {
-            if (mc.screen == null) mc.setScreen(new ChatLogScreen());
+            if (ScreenProvider.getScreen() == null) mc.setScreenAndShow(new ChatLogScreen());
         } else if (KeyBinds.CLEAR_CHAT.matches(key, scanCode)) {
             for (ChatChannel channel : ChatManagerCore.getChannels().values()) channel.clear();
         } else if (KeyBinds.TOGGLE_VOICE.matches(key, scanCode)) {

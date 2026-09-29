@@ -2,10 +2,11 @@ package ru.fozeton.diamondchat.mixin.chat;
 
 import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -66,11 +67,11 @@ public class ChatScreenMixin extends Screen {
                 Component.literal("Macros"),
                 () -> {
                     config.setEnabled(!config.isEnabled());
-                    ChatConfigManager.getInstance().save(config);
+                    ChatConfigManager.getInstance().save(config.getClass());
                     if (this.macrosButton != null)
                         this.macrosButton.setActive(config.isEnabled());
                 },
-                () -> instance.setScreen(new MacrosScreen())
+                () -> instance.setScreenAndShow(new MacrosScreen())
         );
         this.macrosButton.setActive(config.isEnabled());
 
@@ -93,7 +94,7 @@ public class ChatScreenMixin extends Screen {
         this.calculatorButton = new TabButtonWidget(
                 x + gap * 2, y, 80, h,
                 Component.literal("Калькулятор"),
-                () -> instance.setScreen(new CalculatorScreen()),
+                () -> instance.setScreenAndShow(new CalculatorScreen()),
                 null
         );
 
@@ -127,26 +128,26 @@ public class ChatScreenMixin extends Screen {
         if(!event.getPartialResult().isBlank()) input.setValue(event.getPartialResult());
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if (this.macrosButton != null) this.macrosButton.render(graphics, mouseX, mouseY, delta);
-        if (this.calculatorButton != null) this.calculatorButton.render(graphics, mouseX, mouseY, delta);
-        if (this.aiStyleText != null) this.aiStyleText.render(graphics, mouseX, mouseY, delta);
-        if (this.chats != null) this.chats.render(graphics, mouseX, mouseY, delta);
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    private void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (this.macrosButton != null) this.macrosButton.extractRenderState(graphics, mouseX, mouseY, delta);
+        if (this.calculatorButton != null) this.calculatorButton.extractRenderState(graphics, mouseX, mouseY, delta);
+        if (this.aiStyleText != null) this.aiStyleText.extractRenderState(graphics, mouseX, mouseY, delta);
+        if (this.chats != null) this.chats.extractRenderState(graphics, mouseX, mouseY, delta);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if (this.macrosButton != null && this.macrosButton.mouseClicked(mouseX, mouseY, button))
+    private void onMouseClicked(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+        if (this.macrosButton != null && this.macrosButton.mouseClicked(event, doubleClick))
             cir.setReturnValue(true);
 
-        if (this.calculatorButton != null && this.calculatorButton.mouseClicked(mouseX, mouseY, button))
+        if (this.calculatorButton != null && this.calculatorButton.mouseClicked(event, doubleClick))
             cir.setReturnValue(true);
 
-        if (this.aiStyleText != null && this.aiStyleText.mouseClicked(mouseX, mouseY, button))
+        if (this.aiStyleText != null && this.aiStyleText.mouseClicked(event, doubleClick))
             cir.setReturnValue(true);
 
-        if (this.chats != null && this.chats.mouseClicked(mouseX, mouseY, button))
+        if (this.chats != null && this.chats.mouseClicked(event, doubleClick))
             cir.setReturnValue(true);
     }
 }

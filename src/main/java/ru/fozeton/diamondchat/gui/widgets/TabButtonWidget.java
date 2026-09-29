@@ -1,9 +1,11 @@
 package ru.fozeton.diamondchat.gui.widgets;
 
 import lombok.Setter;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 public class TabButtonWidget extends AbstractWidget {
@@ -30,8 +32,9 @@ public class TabButtonWidget extends AbstractWidget {
     public boolean isToggled() { return active; }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!isHovered()) return false;
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (!isMouseOver(event.x(), event.y())) return false;
+        int button = event.button();
         if (button == 1) {
             if (onRightClick != null) onRightClick.run();
             return true;
@@ -45,15 +48,15 @@ public class TabButtonWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         graphics.fill(getX(), getY(), getX() + width, getY() + height, BG);
         int border = active ? BORDER_ACTIVE : isHovered() ? BORDER_HOVER : BORDER_INACTIVE;
-        graphics.renderOutline(getX(), getY(), width, height, border);
+        graphics.outline(getX(), getY(), width, height, border);
         int textColor = active ? TEXT_ACTIVE : isHovered() ? TEXT_HOVER : TEXT_INACTIVE;
-        var font = net.minecraft.client.Minecraft.getInstance().font;
+        var font = Minecraft.getInstance().font;
         int textX = getX() + (width - font.width(getMessage())) / 2;
         int textY = getY() + (height - 8) / 2;
-        graphics.drawString(font, getMessage(), textX, textY, textColor, false);
+        graphics.text(font, getMessage(), textX, textY, textColor, false);
     }
 
     @Override

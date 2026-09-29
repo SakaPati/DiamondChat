@@ -2,7 +2,7 @@ package ru.fozeton.diamondchat.chat.utils;
 
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.ChatVisiblity;
 import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
@@ -33,7 +33,7 @@ public class ChatRenderManager {
         }
     }
 
-    public boolean render(GuiGraphics context, int mouseX, int mouseY, boolean focused) {
+    public boolean render(GuiGraphicsExtractor context, int mouseX, int mouseY, boolean focused) {
         if (!this.isChatHidden()) {
             views.forEach(view -> view.render(context, mouseX, mouseY, focused));
             return true;

@@ -1,6 +1,6 @@
 package ru.fozeton.diamondchat.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -86,7 +86,7 @@ public class MacrosScreen extends Screen {
             addRenderableWidget(SimpleButton.of(guiX + PAD, rowY, MACRO_W, ROW_H,
                     Component.literal(label), labelColor, btn -> {
                         m.setActive(!m.isActive());
-                        ChatConfigManager.getInstance().save(config);
+                        ChatConfigManager.getInstance().save(config.getClass());
                         rebuildWidgets();
                     }));
 
@@ -98,7 +98,7 @@ public class MacrosScreen extends Screen {
                     Component.literal("✕"), COL_RED, btn -> {
                         config.getMacros().remove(key);
                         keys.remove(key);
-                        ChatConfigManager.getInstance().save(config);
+                        ChatConfigManager.getInstance().save(config.getClass());
                         rebuildWidgets();
                     }));
         }
@@ -110,30 +110,30 @@ public class MacrosScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         int guiX = (this.width - GUI_W) / 2;
         int guiY = (this.height - GUI_H) / 2;
 
         graphics.fill(guiX, guiY, guiX + GUI_W, guiY + GUI_H, COL_BG);
-        graphics.renderOutline(guiX, guiY, GUI_W, GUI_H, COL_DIVIDER);
-        super.render(graphics, mouseX, mouseY, delta);
+        graphics.outline(guiX, guiY, GUI_W, GUI_H, COL_DIVIDER);
+        super.extractRenderState(graphics, mouseX, mouseY, delta);
 
-        graphics.drawString(font, "МАКРОСЫ", guiX + PAD, guiY + 10, COL_MUTED, false);
+        graphics.text(font, "МАКРОСЫ", guiX + PAD, guiY + 10, COL_MUTED, false);
         graphics.fill(guiX + PAD, guiY + 22, guiX + GUI_W - PAD, guiY + 23, COL_DIVIDER);
 
         long active = config.getMacros().values().stream().filter(MacrosConfig.Macros::isActive).count();
-        graphics.drawString(font, "АКТИВНЫХ: " + active, guiX + PAD, guiY + 30, COL_PURPLE, false);
-        graphics.drawString(font, "ВСЕГО: " + keys.size(), guiX + PAD + 140, guiY + 30, COL_MUTED, false);
+        graphics.text(font, "АКТИВНЫХ: " + active, guiX + PAD, guiY + 30, COL_PURPLE, false);
+        graphics.text(font, "ВСЕГО: " + keys.size(), guiX + PAD + 140, guiY + 30, COL_MUTED, false);
 
-        graphics.drawString(font, "СПИСОК МАКРОСОВ", guiX + PAD, guiY + 50, 0xFF3d3d52, false);
+        graphics.text(font, "СПИСОК МАКРОСОВ", guiX + PAD, guiY + 50, 0xFF3d3d52, false);
         graphics.fill(guiX + PAD, guiY + 62, guiX + GUI_W - PAD, guiY + 63, COL_DIVIDER);
 
         int inputY = guiY + GUI_H - 60;
         graphics.fill(guiX + PAD, inputY - 8, guiX + GUI_W - PAD, inputY - 7, COL_DIVIDER);
-        graphics.drawString(font, "ДОБАВИТЬ МАКРОС", guiX + PAD, inputY - 18, 0xFF3d3d52, false);
+        graphics.text(font, "ДОБАВИТЬ МАКРОС", guiX + PAD, inputY - 18, 0xFF3d3d52, false);
 
         if (keys.size() > MAX_VISIBLE) {
-            graphics.drawString(font, "↑↓ scroll", guiX + GUI_W - 60, guiY + 50, COL_MUTED, false);
+            graphics.text(font, "↑↓ scroll", guiX + GUI_W - 60, guiY + 50, COL_MUTED, false);
         }
     }
 
@@ -161,7 +161,7 @@ public class MacrosScreen extends Screen {
         MacrosConfig.Macros entry = new MacrosConfig.Macros(time, true);
         config.getMacros().put(key, entry);
         keys.add(key);
-        ChatConfigManager.getInstance().save(config);
+        ChatConfigManager.getInstance().save(config.getClass());
         rebuildWidgets();
     }
 }

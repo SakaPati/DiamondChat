@@ -3,10 +3,11 @@ package ru.fozeton.diamondchat.chat.utils;
 import com.mojang.blaze3d.platform.NativeImage;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.module.Gif;
 import ru.fozeton.chatmanager.module.gif.McAnimCodec;
@@ -20,7 +21,7 @@ public class GifTexture {
     private static final Map<String, GifTexture> CACHE = new HashMap<>();
     private final McAnimCodec.Animation animation;
     private final Gif gif = Gif.getInstance();
-    private final ResourceLocation location;
+    private final Identifier location;
     private final DynamicTexture texture;
     private final NativeImage image;
     @Getter
@@ -37,8 +38,8 @@ public class GifTexture {
         this.height = animation.getHeight();
 
         this.image = new NativeImage(width, height, false);
-        this.texture = new DynamicTexture(image);
-        this.location = ResourceLocation.fromNamespaceAndPath("diamondchat", "dynamic/" + gifId);
+        this.texture = new DynamicTexture(() -> "diamondchat_voice", image);
+        this.location = Identifier.fromNamespaceAndPath("diamondchat", "dynamic/" + gifId);
 
         Minecraft.getInstance().getTextureManager().register(location, texture);
 
@@ -49,7 +50,7 @@ public class GifTexture {
         try {
             return readAnimation(gifId);
         } catch (Exception firstAttempt) {
-            if (!gif.download(gifId)) {
+            if (Boolean.FALSE.equals(gif.download(gifId).join())) {
                 throw new RuntimeException("Failed to download gif: " + gifId, firstAttempt);
             }
             try {
@@ -61,7 +62,7 @@ public class GifTexture {
     }
 
     private McAnimCodec.Animation readAnimation(String gifId) throws Exception {
-        Path path = ChatManagerCore.CONFIG_DIR.resolve("cache").resolve(gifId + ".mcanim");
+        Path path = ChatManagerCore.getConfigDir().resolve("cache").resolve(gifId + ".mcanim");
         return McAnimCodec.read(path);
     }
 
@@ -74,7 +75,7 @@ public class GifTexture {
         return CACHE.computeIfAbsent(gifId, GifTexture::new);
     }
 
-    public void render(GuiGraphics guiGraphics, int x, int y, float alpha) {
+    public void render(GuiGraphicsExtractor guiGraphics, int x, int y, float alpha) {
         List<McAnimCodec.Frame> frames = animation.getFrames();
         if (frames == null || frames.isEmpty()) return;
 
@@ -96,7 +97,7 @@ public class GifTexture {
         int color = (alphaInt << 24) | 0x00FFFFFF;
 
         guiGraphics.blit(
-                RenderType::guiTextured,
+                RenderPipelines.GUI_TEXTURED,
                 this.location,
                 x, y - displayHeight,
                 0.0F, 0.0F,

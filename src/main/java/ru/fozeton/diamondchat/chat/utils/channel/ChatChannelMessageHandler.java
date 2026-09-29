@@ -2,12 +2,16 @@ package ru.fozeton.diamondchat.chat.utils.channel;
 
 import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.state.gui.GuiTextRenderState;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStackTemplate;
+import org.joml.Matrix3x2f;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
@@ -16,6 +20,7 @@ import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.PlaySounds;
+import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.chat.utils.ChatMetrics;
 import ru.fozeton.diamondchat.chat.utils.GifTexture;
@@ -23,9 +28,11 @@ import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ChatChannelMessageHandler {
     private final ChatMetrics metrics = ChatMetrics.getInstance();
@@ -74,7 +81,7 @@ public class ChatChannelMessageHandler {
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    public void render(GuiGraphics context, int mouseX, int mouseY, Font renderer, boolean isChatOpen) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, Font renderer, boolean isChatOpen) {
         if (settings == null || geometry == null || !settings.isVisible()) return;
         this.x = geometry.getX();
         this.y = geometry.getY();
@@ -106,12 +113,21 @@ public class ChatChannelMessageHandler {
         if (dragHandler != null) dragHandler.render(context, renderer, mouseX, mouseY, isChatOpen);
 
         if (hoveredStyle != null && hoveredStyle.getHoverEvent() != null) {
-            context.renderComponentHoverEffect(renderer, hoveredStyle, mouseX, mouseY);
+            HoverEvent hover = hoveredStyle.getHoverEvent();
+            if (hover instanceof HoverEvent.ShowText(Component value)) {
+                context.setTooltipForNextFrame(
+                        renderer,
+                        renderer.split(value, Math.max(context.guiWidth() / 2, 200)),
+                        mouseX, mouseY
+                );
+            } else if (hover instanceof HoverEvent.ShowItem(ItemStackTemplate item)) {
+                context.setTooltipForNextFrame(renderer, item.create(), mouseX, mouseY);
+            }
         }
     }
 
     private boolean gifRender(
-            GuiGraphics context,
+            GuiGraphicsExtractor context,
             Font renderer,
             int mouseX,
             int mouseY,
@@ -171,7 +187,7 @@ public class ChatChannelMessageHandler {
     }
 
     private void drawTextLine(
-            GuiGraphics context,
+            GuiGraphicsExtractor context,
             Font renderer,
             FormattedCharSequence text,
             int mouseX,
@@ -179,16 +195,23 @@ public class ChatChannelMessageHandler {
             int currentY,
             int textColor
     ) {
-        context.drawString(renderer, text, x, currentY, textColor, false);
+        context.text(renderer, text, x, currentY, textColor, false);
 
-        if (mouseX >= x && mouseX <= x + viewWidth && mouseY >= currentY &&
-            mouseY <= currentY + renderer.lineHeight) {
-            hoveredStyle = renderer.getSplitter().componentStyleAtWidth(text, mouseX - x);
+        if (mouseX >= x && mouseX <= x + viewWidth && mouseY >= currentY && mouseY <= currentY + renderer.lineHeight) {
+            GuiTextRenderState state = new GuiTextRenderState(
+                    renderer, text, new Matrix3x2f(context.pose()),
+                    x, currentY, textColor, 0, false, true,
+                    context.scissorStack.peek()
+            );
+            ActiveTextCollector.findElementUnderCursor(
+                    state, mouseX, mouseY,
+                    style -> hoveredStyle = style
+            );
         }
     }
 
     private boolean textRender(
-            GuiGraphics context,
+            GuiGraphicsExtractor context,
             Font renderer,
             int mouseX,
             int mouseY,
@@ -289,7 +312,10 @@ public class ChatChannelMessageHandler {
                 if (currentY < y || renderedLinesCount > maxVisible) break;
 
                 if (mouseY >= currentY && mouseY <= currentY + renderer.lineHeight) {
-                    return renderer.getSplitter().componentStyleAtWidth(text, (int) (mouseX - x));
+                    ActiveTextCollector.ClickableStyleFinder finder =
+                            new ActiveTextCollector.ClickableStyleFinder(renderer, (int) mouseX, (int) mouseY);
+                    finder.accept(x, currentY, text);
+                    return finder.result();
                 }
             }
             if (currentY < y || renderedLinesCount > maxVisible) break;
@@ -302,10 +328,10 @@ public class ChatChannelMessageHandler {
         if (button != 0) return;
 
         Minecraft client = Minecraft.getInstance();
-        if (client.screen == null) return;
+        if (ScreenProvider.getScreen() == null) return;
 
         Style style = getStyleAt(mouseX, mouseY, client.font);
-        if (style != null && style.getClickEvent() != null) client.screen.handleComponentClicked(style);
+        if (style != null && style.getClickEvent() != null) ScreenProvider.handleComponentClicked(style);
     }
 
     @EventSubscriber(event = PlayerMentionedEvent.class)

@@ -3,9 +3,10 @@ package ru.fozeton.diamondchat.gui.widgets;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
@@ -16,6 +17,9 @@ import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
+import ru.fozeton.chatmanager.utils.compat.Graphics26_2;
+import ru.fozeton.chatmanager.utils.compat.providers.GraphicsProvider;
+import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.utils.notify.Notification;
 
 import java.util.ArrayList;
@@ -54,12 +58,14 @@ public class ChatHistoryWidget extends AbstractWidget {
         final boolean remapColors = this.useColorRemapper;
 
         CompletableFuture.supplyAsync(() -> buildCache(searchQuery, channelId, remapColors))
-                .thenAcceptAsync(result -> {
-                    if (buildId != currentBuildId.get()) return;
-                    this.cachedLines = result.lines();
-                    this.fullHeight = result.totalHeight();
-                    scrollToBottom();
-                }, Minecraft.getInstance());
+                .thenAcceptAsync(
+                        result -> {
+                            if (buildId != currentBuildId.get()) return;
+                            this.cachedLines = result.lines();
+                            this.fullHeight = result.totalHeight();
+                            scrollToBottom();
+                        }, Minecraft.getInstance()
+                );
     }
 
     private BuildResult buildCache(String searchQuery, String channelId, boolean remapColors) {
@@ -119,7 +125,7 @@ public class ChatHistoryWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         Font font = Minecraft.getInstance().font;
         int lineH = font.lineHeight + 3;
 
@@ -135,13 +141,13 @@ public class ChatHistoryWidget extends AbstractWidget {
 
             int lineTop = getY() + cl.yOffset() - (int) this.scrollAmount;
             boolean isHovered = mouseX >= getX() && mouseX < getX() + this.width - 15
-                    && mouseY >= lineTop && mouseY < lineTop + cl.totalHeight();
+                                && mouseY >= lineTop && mouseY < lineTop + cl.totalHeight();
 
             int rowY = lineTop;
             for (FormattedCharSequence textLine : cl.lines()) {
                 graphics.fill(getX(), rowY, getX() + this.width - 15, rowY + lineH, cl.bg());
                 graphics.fill(getX(), rowY, getX() + 2, rowY + lineH, cl.stripe());
-                graphics.drawString(font, textLine, getX() + 6, rowY + 2, -1, false);
+                graphics.text(font, textLine, getX() + 6, rowY + 2, -1, false);
                 rowY += lineH;
             }
 
@@ -151,7 +157,7 @@ public class ChatHistoryWidget extends AbstractWidget {
                 int relY = mouseY - lineTop;
                 int lineIndex = relY / lineH;
                 if (relX >= 0 && lineIndex >= 0 && lineIndex < cl.lines().size()) {
-                    hoveredStyle = font.getSplitter().componentStyleAtWidth(cl.lines().get(lineIndex), relX);
+                    hoveredStyle = ScreenProvider.getStyleAt(font, cl.lines().get(lineIndex), relX);
                 }
             }
         }
@@ -159,13 +165,15 @@ public class ChatHistoryWidget extends AbstractWidget {
         graphics.disableScissor();
 
         if (hoveredStyle != null) {
-            graphics.renderComponentHoverEffect(font, hoveredStyle, mouseX, mouseY);
+            Graphics26_2 graphics26_2 = new Graphics26_2(graphics);
+            GraphicsProvider provider = new GraphicsProvider(graphics26_2);
+            ScreenProvider.renderHoverEffect(provider, font, hoveredStyle, mouseX, mouseY);
         }
 
         renderScrollbar(graphics, mouseX, mouseY);
     }
 
-    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderScrollbar(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (this.fullHeight <= this.height) return;
 
         int trackX = getX() + this.width - BAR_W;
@@ -176,11 +184,18 @@ public class ChatHistoryWidget extends AbstractWidget {
         int travel = this.height - thumbH;
         int thumbY = getY() + (int) (this.scrollAmount * travel / scrollRange);
 
-        this.isHoveringScrollbar = mouseX >= trackX - 2 && mouseX <= trackX + BAR_W && mouseY >= thumbY && mouseY <= thumbY + thumbH;
+        this.isHoveringScrollbar =
+                mouseX >= trackX - 2 && mouseX <= trackX + BAR_W && mouseY >= thumbY && mouseY <= thumbY + thumbH;
         boolean hov = isHoveringScrollbar || dragging;
 
         graphics.fill(trackX - 1, thumbY, trackX + BAR_W + 1, thumbY + thumbH, COL_THUMB_DARK);
-        graphics.fill(trackX, thumbY + 1, trackX + BAR_W, thumbY + thumbH - 1, hov ? COL_THUMB_HOV : Long.decode(settings.getHistoryChat().getScrollColor()).intValue());
+        graphics.fill(
+                trackX,
+                thumbY + 1,
+                trackX + BAR_W,
+                thumbY + thumbH - 1,
+                hov ? COL_THUMB_HOV : Long.decode(settings.getHistoryChat().getScrollColor()).intValue()
+        );
     }
 
     @Override
@@ -190,7 +205,11 @@ public class ChatHistoryWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
+
         if (!isMouseOver(mouseX, mouseY)) return false;
 
         if (button == 0 && this.fullHeight > this.height) {
@@ -214,11 +233,8 @@ public class ChatHistoryWidget extends AbstractWidget {
                         int relX = (int) mouseX - (getX() + 6);
                         int lineIndex = ((int) mouseY - lineTop) / lineH;
                         if (relX >= 0 && lineIndex >= 0 && lineIndex < cl.lines().size()) {
-                            Style style = font.getSplitter().componentStyleAtWidth(cl.lines().get(lineIndex), relX);
-                            if (style != null && Minecraft.getInstance().screen != null) {
-                                Minecraft.getInstance().screen.handleComponentClicked(style);
-                                return true;
-                            }
+                            Style style = ScreenProvider.getStyleAt(font, cl.lines().get(lineIndex), relX);
+                            if (style != null && ScreenProvider.handleComponentClicked(style)) return true;
                         }
                     } else {
                         Minecraft.getInstance().keyboardHandler.setClipboard(cl.message().getContent().getString());
@@ -228,27 +244,31 @@ public class ChatHistoryWidget extends AbstractWidget {
                 }
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (this.dragging && button == 0) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (this.dragging && event.button() == 0) {
             int thumbH = Math.max(16, (int) ((float) this.height * this.height / this.fullHeight));
             int travel = this.height - thumbH;
             if (travel > 0) {
-                double deltaY = mouseY - this.dragStartY;
-                this.scrollAmount = Mth.clamp(this.dragStartScroll + (deltaY * getMaxScroll() / travel), 0, getMaxScroll());
+                double deltaY = event.y() - this.dragStartY;
+                this.scrollAmount = Mth.clamp(
+                        this.dragStartScroll + (deltaY * getMaxScroll() / travel),
+                        0,
+                        getMaxScroll()
+                );
             }
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) this.dragging = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (event.button() == 0) this.dragging = false;
+        return super.mouseReleased(event);
     }
 
     @Override

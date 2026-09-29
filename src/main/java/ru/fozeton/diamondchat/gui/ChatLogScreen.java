@@ -1,7 +1,8 @@
 package ru.fozeton.diamondchat.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
@@ -19,12 +20,10 @@ public class ChatLogScreen extends Screen {
     private static final int SEARCH_RESERVED_WIDTH = 140;
     private static final int MAX_CONTENT_WIDTH_THRESHOLD = 1630;
     private static final int SCROLL_STEP = 20;
-
+    private final List<ChannelButton> channelButtonsList = new ArrayList<>();
     private ChatHistoryWidget historyWidget;
     private String currentChannelId = null;
     private String currentSearchQuery = "";
-
-    private final List<ChannelButton> channelButtonsList = new ArrayList<>();
     private int channelsAreaX;
     private int channelsAreaY = 20;
     private int channelsAreaWidth;
@@ -49,16 +48,20 @@ public class ChatLogScreen extends Screen {
         updateChannel(null);
 
         this.channelsAreaX = 10;
-        this.channelsAreaWidth = this.width - this.channelsAreaX - SEARCH_RESERVED_WIDTH;
-        if (this.channelsAreaWidth < 100) {
-            this.channelsAreaWidth = 100;
-        }
+        this.channelsAreaWidth = Math.max(100, this.width - this.channelsAreaX - SEARCH_RESERVED_WIDTH);
 
         buildChannelButtons();
 
         int inputWidth = 100;
         int margin = 25;
-        SearchEditBox searchBox = new SearchEditBox(this.font, this.width - inputWidth - margin, 20, inputWidth, 20, Component.literal("Поиск"));
+        SearchEditBox searchBox = new SearchEditBox(
+                this.font,
+                this.width - inputWidth - margin,
+                20,
+                inputWidth,
+                20,
+                Component.literal("Поиск")
+        );
         searchBox.setOnEnter(() -> {
             this.currentSearchQuery = searchBox.getValue();
             this.historyWidget.updateCacheAsync(this.currentSearchQuery, this.currentChannelId);
@@ -70,7 +73,6 @@ public class ChatLogScreen extends Screen {
         this.channelButtonsList.clear();
         this.channelsScrollOffset = 0;
 
-        // id=null -> "Все" + все каналы из конфига, в порядке добавления
         Map<String, String> entries = new LinkedHashMap<>();
         entries.put(null, "Все");
         ChannelsConfig channelsConfig = ChatConfigManager.getInstance().getChannelsConfig();
@@ -86,7 +88,8 @@ public class ChatLogScreen extends Screen {
             int textWidth = this.font.width(name);
             int btnWidth = Math.max(MIN_BUTTON_WIDTH, textWidth + BUTTON_HPADDING);
 
-            ChannelButton button = new ChannelButton(0, this.channelsAreaY, btnWidth, CHANNELS_AREA_HEIGHT,
+            ChannelButton button = new ChannelButton(
+                    0, this.channelsAreaY, btnWidth, CHANNELS_AREA_HEIGHT,
                     Component.literal(name),
                     () -> updateChannel(channelId),
                     () -> Objects.equals(this.currentChannelId, channelId)
@@ -113,7 +116,7 @@ public class ChatLogScreen extends Screen {
 
     private boolean isInsideChannelsArea(double mouseX, double mouseY) {
         return mouseX >= this.channelsAreaX && mouseX <= this.channelsAreaX + this.channelsAreaWidth
-                && mouseY >= this.channelsAreaY && mouseY <= this.channelsAreaY + CHANNELS_AREA_HEIGHT;
+               && mouseY >= this.channelsAreaY && mouseY <= this.channelsAreaY + CHANNELS_AREA_HEIGHT;
     }
 
     private void updateChannel(String channelId) {
@@ -124,25 +127,27 @@ public class ChatLogScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(graphics, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, this.width, this.height, 0x8018181f);
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderChannelButtons(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        extractChannelButtons(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void renderChannelButtons(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    private void extractChannelButtons(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         boolean scissor = this.channelsScrollEnabled;
         if (scissor) {
-            graphics.enableScissor(this.channelsAreaX, this.channelsAreaY,
-                    this.channelsAreaX + this.channelsAreaWidth, this.channelsAreaY + CHANNELS_AREA_HEIGHT);
+            graphics.enableScissor(
+                    this.channelsAreaX, this.channelsAreaY,
+                    this.channelsAreaX + this.channelsAreaWidth, this.channelsAreaY + CHANNELS_AREA_HEIGHT
+            );
         }
         for (ChannelButton button : this.channelButtonsList) {
-            button.render(graphics, mouseX, mouseY, partialTick);
+            button.extractRenderState(graphics, mouseX, mouseY, partialTick);
         }
         if (scissor) {
             graphics.disableScissor();
@@ -150,23 +155,24 @@ public class ChatLogScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        for (ChannelButton channelButton : this.channelButtonsList) {
-            if (isInsideChannelsArea(mouseX, mouseY) && channelButton.isMouseOver(mouseX, mouseY)) {
-                if (channelButton.mouseClicked(mouseX, mouseY, button)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (isInsideChannelsArea(event.x(), event.y())) {
+            for (ChannelButton channelButton : this.channelButtonsList) {
+                if (channelButton.isMouseOver(event.x(), event.y())
+                    && channelButton.mouseClicked(event, doubleClick)) {
                     return true;
                 }
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
         for (ChannelButton channelButton : this.channelButtonsList) {
-            channelButton.mouseReleased(mouseX, mouseY, button);
+            channelButton.mouseReleased(event);
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override

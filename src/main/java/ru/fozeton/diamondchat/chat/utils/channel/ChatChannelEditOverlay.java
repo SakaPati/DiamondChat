@@ -2,15 +2,15 @@ package ru.fozeton.diamondchat.chat.utils.channel;
 
 import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import lombok.Getter;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.InputEvent;
+import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.utils.enums.DragMode;
 import ru.fozeton.diamondchat.utils.enums.Resizing;
 
@@ -40,7 +40,7 @@ public class ChatChannelEditOverlay {
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    public void render(GuiGraphics context, Font renderer, int mouseX, int mouseY, boolean isChatOpen) {
+    public void render(GuiGraphicsExtractor context, Font renderer, int mouseX, int mouseY, boolean isChatOpen) {
 
         lastMouseX = mouseX;
         lastMouseY = mouseY;
@@ -53,7 +53,7 @@ public class ChatChannelEditOverlay {
         int vh = geometry.getViewHeight();
         int markSize = settings.getEditMode().getMarkSize();
 
-        context.renderOutline(x - 8, y, vw + 8, vh - 2, 0xFF7c6ef5);
+        context.outline(x - 8, y, vw + 8, vh - 2, 0xFF7c6ef5);
 
         boolean cornerTL = isNearTopLeftCorner(mouseX, mouseY);
         boolean cornerTR = isNearTopRightCorner(mouseX, mouseY);
@@ -74,11 +74,11 @@ public class ChatChannelEditOverlay {
         renderHandle(context, handleRightX(), handleBottomY(), markSize, markSize, cornerBR);
 
         String hint = vw + " × " + vh;
-        context.drawString(renderer, Component.literal(hint),
+        context.text(renderer, Component.literal(hint),
                 x + vw - renderer.width(hint) - 4,
                 y + 4, 0xFFb8aff8, false);
 
-        context.drawString(renderer, Component.literal(settings.getName()), x, y + 5, 0xFFb8aff8, false);
+        context.text(renderer, Component.literal(settings.getName()), x, y + 5, 0xFFb8aff8, false);
     }
 
     private int markSize() {
@@ -151,14 +151,14 @@ public class ChatChannelEditOverlay {
                 && my >= geometry.getY() && my <= geometry.getY() + geometry.getViewHeight();
     }
 
-    private void renderHandle(GuiGraphics ctx, int x, int y, int w, int h, boolean hovered) {
+    private void renderHandle(GuiGraphicsExtractor ctx, int x, int y, int w, int h, boolean hovered) {
         ctx.fill(x, y, x + w, y + h, hovered ? Long.decode(settings.getEditMode().getMarkHover()).intValue() : Long.decode(settings.getEditMode().getMarkColor()).intValue());
-        ctx.renderOutline(x, y, w, h, 0xFF3a2f8a);
+        ctx.outline(x, y, w, h, 0xFF3a2f8a);
     }
 
     @EventSubscriber(event = InputEvent.MouseInputEvent.class)
     public void mouseInput(InputEvent.MouseInputEvent event) {
-        if (!(Minecraft.getInstance().screen instanceof ChatScreen)) return;
+        if (!(ScreenProvider.getScreen() instanceof ChatScreen)) return;
         if (dragHandler.getCurrentMode() == DragMode.NONE) return;
         if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return;
 
@@ -212,7 +212,7 @@ public class ChatChannelEditOverlay {
     public void keyPress(InputEvent.KeyInputEvent event) {
         boolean active = event.getAction() == InputEvent.KeyInputEvent.Action.PRESS || event.getAction() == InputEvent.KeyInputEvent.Action.HOLDING;
 
-        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_CONTROL && Minecraft.getInstance().screen instanceof ChatScreen) {
+        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_CONTROL && ScreenProvider.getScreen() instanceof ChatScreen) {
             if (active) {
                 if (dragHandler.getCurrentMode() == DragMode.NONE) dragHandler.setCurrentMode(DragMode.EDIT);
             } else {

@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
@@ -39,7 +39,7 @@ public class ChatChannelScrollHandler {
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    public void render(GuiGraphics context, boolean isChatOpen) {
+    public void render(GuiGraphicsExtractor context, boolean isChatOpen) {
         if (!settings.isVisibleScroll() || !isChatOpen) return;
 
         int x = geometry.getX();

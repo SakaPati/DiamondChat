@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.diamondchat.utils.enums.DragMode;
 import ru.fozeton.diamondchat.utils.enums.Resizing;
@@ -24,8 +24,14 @@ public class ChatChannelDragHandler {
         this.editOverlay = new ChatChannelEditOverlay(this, geometry);
     }
 
-    public void render(GuiGraphics context, Font renderer, int mouseX, int mouseY, boolean isChatOpen) {
-        if(!settings.isVisible()) return;
+    public void render(
+            GuiGraphicsExtractor context,
+            Font renderer,
+            int mouseX,
+            int mouseY,
+            boolean isChatOpen
+    ) {
+        if (!settings.isVisible()) return;
         editOverlay.render(context, renderer, mouseX, mouseY, isChatOpen);
 
         if (!isChatOpen) return;

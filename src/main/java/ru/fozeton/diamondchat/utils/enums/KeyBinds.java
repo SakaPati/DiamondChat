@@ -2,8 +2,9 @@ package ru.fozeton.diamondchat.utils.enums;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import lombok.Getter;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 @Getter
@@ -12,7 +13,10 @@ public enum KeyBinds {
     CLEAR_CHAT("key.diamondchat.clear_chat", GLFW.GLFW_KEY_DELETE),
     TOGGLE_VOICE("key.diamondchat.toggle_voice", GLFW.GLFW_KEY_V);
 
-    private static final String CATEGORY = "category.diamondchat.title";
+    private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(
+            Identifier.fromNamespaceAndPath("diamondchat", "keys")
+    );
+
     private final String translationKey;
     private final int defaultKey;
     private KeyMapping keyMapping;
@@ -24,7 +28,7 @@ public enum KeyBinds {
 
     public static void registerAll() {
         for (KeyBinds bind : values()) {
-            bind.keyMapping = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            bind.keyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                     bind.translationKey,
                     InputConstants.Type.KEYSYM,
                     bind.defaultKey,
@@ -34,6 +38,7 @@ public enum KeyBinds {
     }
 
     public boolean matches(int keyCode, int scanCode) {
-        return keyMapping != null && keyMapping.matches(keyCode, scanCode);
+        if (keyMapping == null) return false;
+        return keyMapping.matches(InputConstants.Type.KEYSYM.getOrCreate(keyCode));
     }
 }

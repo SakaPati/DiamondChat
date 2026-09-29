@@ -2,18 +2,20 @@ package ru.fozeton.diamondchat.utils.notify;
 
 import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import lombok.Getter;
-import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.IdentifiedLayer;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 import ru.fozeton.chatmanager.ChatManagerCore;
 import ru.fozeton.chatmanager.events.InputEvent;
+import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.events.game.NotificationEvent;
 import ru.fozeton.diamondchat.utils.enums.NotificationType;
@@ -31,30 +33,29 @@ public class NotificationManager {
 
     public NotificationManager() {
         super();
-        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> ScreenEvents.afterRender(screen).register(
-                (s, drawContext, mouseX, mouseY, tickDelta) -> renderNotifications(drawContext, client)));
+        ScreenEvents.AFTER_INIT.register((client, screen, _, _) -> ScreenEvents.afterExtract(screen).register(
+                (_, drawContext, _, _, _) -> renderNotifications(drawContext, client)));
 
-        HudLayerRegistrationCallback.EVENT.register(layeredDrawer ->
-                                                            layeredDrawer.attachLayerAfter(
-                                                                    IdentifiedLayer.SUBTITLES,
-                                                                    ResourceLocation.fromNamespaceAndPath(
-                                                                            "moderation",
-                                                                            "notification"
-                                                                    ),
-                                                                    (drawContext, tickCounter) -> {
-                                                                        if (Minecraft.getInstance().screen == null) {
-                                                                            renderNotifications(
-                                                                                    drawContext,
-                                                                                    Minecraft.getInstance()
-                                                                            );
-                                                                        }
-                                                                    }
-                                                            ));
+        HudElementRegistry.attachElementAfter(
+                VanillaHudElements.SUBTITLES,
+                Identifier.fromNamespaceAndPath(
+                        "moderation",
+                        "notification"
+                ),
+                (drawContext, _) -> {
+                    if (ScreenProvider.getScreen() == null) {
+                        renderNotifications(
+                                drawContext,
+                                Minecraft.getInstance()
+                        );
+                    }
+                }
+        );
         DiamondChat.EVENT_BUS.register(this);
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    private void renderNotifications(GuiGraphics graphics, Minecraft client) {
+    private void renderNotifications(GuiGraphicsExtractor graphics, Minecraft client) {
         activeNotifications.removeIf(ActiveNotification::isFullyExpired);
         if (activeNotifications.isEmpty()) return;
 
@@ -67,8 +68,8 @@ public class NotificationManager {
         double mouseX = client.mouseHandler.xpos() * windowWidth / client.getWindow().getWidth();
         double mouseY = client.mouseHandler.ypos() * graphics.guiHeight() / client.getWindow().getHeight();
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 5000f);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(0, 0);
 
         for (ActiveNotification active : activeNotifications) {
             float animationScale = getAnimationScale(active);
@@ -105,20 +106,20 @@ public class NotificationManager {
             titleColor = colors[1];
 
             graphics.fill(geo.x(), geo.y(), geo.x() + geo.width(), geo.y() + geo.height(), backgroundColor);
-            graphics.renderOutline(geo.x(), geo.y(), geo.width(), geo.height(), borderColor);
+            graphics.outline(geo.x(), geo.y(), geo.width(), geo.height(), borderColor);
             graphics.fill(geo.x() + 1, geo.y(), geo.x() - 2, geo.y() + geo.height(), accentColor);
 
-            graphics.pose().pushPose();
-            graphics.pose().translate(geo.x() + 3, geo.y() + 5, 0);
-            graphics.pose().scale(TITLE_SCALE * animationScale, TITLE_SCALE * animationScale, 1.0f);
-            graphics.drawString(font, geo.title(), 5, 2, titleColor, false);
-            graphics.pose().popPose();
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(geo.x() + 3, geo.y() + 5);
+            graphics.pose().scale(TITLE_SCALE * animationScale, TITLE_SCALE * animationScale);
+            graphics.text(font, geo.title(), 5, 2, titleColor, false);
+            graphics.pose().popMatrix();
 
-            graphics.pose().pushPose();
-            graphics.pose().translate(geo.x(), geo.y() + 5, 0);
-            graphics.pose().scale(MESSAGE_SCALE * animationScale, MESSAGE_SCALE * animationScale, 1.0f);
-            graphics.drawString(font, geo.message(), 8, 15, messageColor, false);
-            graphics.pose().popPose();
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(geo.x(), geo.y() + 5);
+            graphics.pose().scale(MESSAGE_SCALE * animationScale, MESSAGE_SCALE * animationScale);
+            graphics.text(font, geo.message(), 8, 15, messageColor, false);
+            graphics.pose().popMatrix();
 
             float progress = active.getProgress();
             int progressWidth = (int) (geo.width() * progress);
@@ -133,7 +134,7 @@ public class NotificationManager {
             if (geo.height() > 0) currentY += geo.height() + spacing;
         }
 
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     private float getAnimationScale(ActiveNotification active) {
@@ -194,12 +195,12 @@ public class NotificationManager {
         private final NotificationType type;
         private final Runnable action;
         @Nullable
-        private final ResourceLocation textFont;
+        private final FontDescription textFont;
 
         private boolean closing = false;
         private long closeStartTime;
 
-        public ActiveNotification(Notification notification, @Nullable ResourceLocation textFont) {
+        public ActiveNotification(Notification notification, @Nullable FontDescription textFont) {
             this.notification = notification;
             this.startTime = System.currentTimeMillis();
             this.expiryTime = this.startTime + notification.getDuration().toMillis();

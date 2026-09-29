@@ -11,7 +11,7 @@ import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
-    @Inject(method = "setScreen", at = @At(value = "HEAD"))
+    @Inject(method = "setScreenAndShow", at = @At(value = "HEAD"))
     public void openGui(Screen screen, CallbackInfo ci) {
         DiamondChat.EVENT_BUS.activate(new GuiOpenEvent(screen));
     }

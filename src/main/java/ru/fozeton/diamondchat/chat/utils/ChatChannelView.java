@@ -3,7 +3,7 @@ package ru.fozeton.diamondchat.chat.utils;
 import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -17,6 +17,7 @@ import ru.fozeton.chatmanager.events.channel.MessageAddedToChannelEvent;
 import ru.fozeton.chatmanager.events.channel.MessageStackEvent;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
+import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.chat.utils.channel.*;
 import ru.fozeton.diamondchat.utils.notify.Notification;
@@ -74,7 +75,7 @@ public class ChatChannelView {
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
-    public void render(GuiGraphics context, int mouseX, int mouseY, boolean focused) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, boolean focused) {
         Minecraft client = Minecraft.getInstance();
         Font renderer = client.font;
         messageHandler.render(context, mouseX, mouseY, renderer, focused);
@@ -85,7 +86,7 @@ public class ChatChannelView {
         if (event.getAction() != 1) return;
 
         Minecraft client = Minecraft.getInstance();
-        if (!(client.screen instanceof ChatScreen)) return;
+        if (!(ScreenProvider.getScreen() instanceof ChatScreen)) return;
 
         double scale = client.getWindow().getGuiScale();
         double mouseX = event.getMouseX() / scale;
@@ -174,7 +175,7 @@ public class ChatChannelView {
 
         int newLinesCount = metrics.getLineSlots(newLine, renderer, viewWidth);
 
-        if (settings.isAutoScroll() || !(client.screen instanceof ChatScreen)) scrollHandler.setScrollOffset(0);
+        if (settings.isAutoScroll() || !(ScreenProvider.getScreen() instanceof ChatScreen)) scrollHandler.setScrollOffset(0);
         else {
             int totalLines = metrics.getTotalPixels(chatMessages.values(), renderer, viewWidth);
             int maxScroll = Math.max(0, totalLines - geometry.getViewHeight() + ChatMetrics.GIF_SPACING);
@@ -190,7 +191,7 @@ public class ChatChannelView {
     public void onVisibilityChanged(ChannelVisibilityChangedEvent event) {
         if (!event.getChannelId().equals(channel.getId())) return;
         settings.setVisible(event.isVisible());
-        ChatConfigManager.getInstance().save(config);
+        ChatConfigManager.getInstance().save(config.getClass());
     }
 
     @EventSubscriber(event = MessageStackEvent.class)

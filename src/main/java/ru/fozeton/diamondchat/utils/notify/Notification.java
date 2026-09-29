@@ -2,7 +2,7 @@ package ru.fozeton.diamondchat.utils.notify;
 
 import lombok.Builder;
 import lombok.Getter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.FontDescription;
 import org.jetbrains.annotations.Nullable;
 import ru.fozeton.diamondchat.DiamondChat;
 import ru.fozeton.diamondchat.events.game.NotificationEvent;
@@ -18,7 +18,7 @@ public class Notification {
     private final String message;
     private final Runnable action;
     @Nullable
-    private final ResourceLocation textFont;
+    private final FontDescription textFont;
     @Builder.Default
     private final Duration duration = Duration.ofSeconds(5);
     @Builder.Default
@@ -28,7 +28,7 @@ public class Notification {
             String title,
             String message,
             Runnable action,
-            @Nullable ResourceLocation textFont,
+            @Nullable FontDescription textFont,
             Duration duration,
             NotificationType type
     ) {
@@ -40,36 +40,36 @@ public class Notification {
         this.type = type;
     }
 
-    public static void showInfo(String message, ResourceLocation textFont) {
+    public static void showInfo(String message, FontDescription textFont) {
         showNotification(Notification.builder()
-                .type(NotificationType.INFO)
-                .message(message)
-                .textFont(textFont)
-                .build());
+                                 .type(NotificationType.INFO)
+                                 .message(message)
+                                 .textFont(textFont)
+                                 .build());
     }
 
-    public static void showSuccess(String message, ResourceLocation textFont) {
+    public static void showSuccess(String message, FontDescription textFont) {
         showNotification(Notification.builder()
-                .type(NotificationType.SUCCESS)
-                .message(message)
-                .textFont(textFont)
-                .build());
+                                 .type(NotificationType.SUCCESS)
+                                 .message(message)
+                                 .textFont(textFont)
+                                 .build());
     }
 
-    public static void showError(String message, ResourceLocation textFont) {
+    public static void showError(String message, FontDescription textFont) {
         showNotification(Notification.builder()
-                .type(NotificationType.ERROR)
-                .message(message)
-                .textFont(textFont)
-                .build());
+                                 .type(NotificationType.ERROR)
+                                 .message(message)
+                                 .textFont(textFont)
+                                 .build());
     }
 
-    public static void showWarn(String message, ResourceLocation textFont) {
+    public static void showWarn(String message, FontDescription textFont) {
         showNotification(Notification.builder()
-                .type(NotificationType.WARN)
-                .message(message)
-                .textFont(textFont)
-                .build());
+                                 .type(NotificationType.WARN)
+                                 .message(message)
+                                 .textFont(textFont)
+                                 .build());
     }
 
     public static void showCustom(Notification notification) {

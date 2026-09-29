@@ -1,6 +1,7 @@
 package ru.fozeton.diamondchat.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -21,7 +22,6 @@ public class CalculatorScreen extends Screen {
     private static final int COL_HEADER = 0xFF9d9bb8;
     private final LevelsConfig config = ChatConfigManager.getInstance().loadResource(
             LevelsConfig.class,
-            "diamondchat",
             "assets/data/"
     );
     private EditBox inpCur;
@@ -112,43 +112,43 @@ public class CalculatorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        super.render(graphics, mouseX, mouseY, delta);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
         int gx = (this.width - GUI_W) / 2;
         int gy = (this.height - GUI_H) / 2;
 
         graphics.fill(gx, gy, gx + GUI_W, gy + GUI_H, COL_BG);
-        graphics.renderOutline(gx, gy, GUI_W, GUI_H, COL_LINE);
+        graphics.outline(gx, gy, GUI_W, GUI_H, COL_LINE);
 
-        graphics.drawString(font, "CALCULATOR — УРОВНИ", gx + 25, gy + 20, COL_HEADER, false);
+        graphics.text(font, "CALCULATOR — УРОВНИ", gx + 25, gy + 20, COL_HEADER, false);
         graphics.fill(gx + 25, gy + 40, gx + 335, gy + 41, COL_LINE);
 
-        graphics.drawString(font, "ПАРАМЕТРЫ", gx + 25, gy + 53, COL_MUTED, false);
+        graphics.text(font, "ПАРАМЕТРЫ", gx + 25, gy + 53, COL_MUTED, false);
 
         graphics.fill(gx + 25, gy + 70, gx + 125, gy + 91, 0xFF14141a);
-        graphics.drawString(font, "ТЕКУЩИЙ", gx + 32, gy + 76, 0xFF7c7a9a, false);
+        graphics.text(font, "ТЕКУЩИЙ", gx + 32, gy + 76, 0xFF7c7a9a, false);
         graphics.fill(gx + 25, gy + 91, gx + 335, gy + 92, 0xFF232330);
 
         graphics.fill(gx + 25, gy + 92, gx + 125, gy + 113, 0xFF14141a);
-        graphics.drawString(font, "ЦЕЛЕВОЙ", gx + 32, gy + 98, 0xFF7c7a9a, false);
+        graphics.text(font, "ЦЕЛЕВОЙ", gx + 32, gy + 98, 0xFF7c7a9a, false);
         graphics.fill(gx + 25, gy + 113, gx + 335, gy + 114, COL_LINE);
 
-        graphics.drawString(font, "РЕЗУЛЬТАТ", gx + 25, gy + 126, COL_MUTED, false);
+        graphics.text(font, "РЕЗУЛЬТАТ", gx + 25, gy + 126, COL_MUTED, false);
 
         graphics.fill(gx + 25, gy + 142, gx + 125, gy + 163, 0xFF14141a);
-        graphics.drawString(font, "РАЗНИЦА", gx + 32, gy + 148, COL_MUTED, false);
-        graphics.drawString(font, resDiff, gx + 135, gy + 148, COL_PURPLE, false);
+        graphics.text(font, "РАЗНИЦА", gx + 32, gy + 148, COL_MUTED, false);
+        graphics.text(font, resDiff, gx + 135, gy + 148, COL_PURPLE, false);
         graphics.fill(gx + 25, gy + 163, gx + 335, gy + 164, 0xFF232330);
 
         graphics.fill(gx + 25, gy + 164, gx + 125, gy + 185, 0xFF14141a);
-        graphics.drawString(font, "ДЕНЬГИ", gx + 32, gy + 170, COL_MUTED, false);
-        graphics.drawString(font, resMoney, gx + 135, gy + 170, COL_LIGHT, false);
+        graphics.text(font, "ДЕНЬГИ", gx + 32, gy + 170, COL_MUTED, false);
+        graphics.text(font, resMoney, gx + 135, gy + 170, COL_LIGHT, false);
         graphics.fill(gx + 25, gy + 185, gx + 335, gy + 186, 0xFF232330);
 
         graphics.fill(gx + 25, gy + 186, gx + 125, gy + 207, 0xFF14141a);
-        graphics.drawString(font, "БЛОКИ", gx + 32, gy + 192, COL_MUTED, false);
-        graphics.drawString(font, resBlocks, gx + 135, gy + 192, COL_LIGHT, false);
+        graphics.text(font, "БЛОКИ", gx + 32, gy + 192, COL_MUTED, false);
+        graphics.text(font, resBlocks, gx + 135, gy + 192, COL_LIGHT, false);
 
-        graphics.drawString(font, "Результат обновляется автоматически", gx + 25, gy + 248, 0xFF434354, false);
+        graphics.text(font, "Результат обновляется автоматически", gx + 25, gy + 248, 0xFF434354, false);
     }
 }

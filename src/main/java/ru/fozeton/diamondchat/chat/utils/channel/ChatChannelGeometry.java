@@ -82,6 +82,6 @@ public class ChatChannelGeometry {
         channelSettings.setX(x);
         channelSettings.setY(y);
 
-        ChatConfigManager.getInstance().save(config);
+        ChatConfigManager.getInstance().save(config.getClass());
     }
 }

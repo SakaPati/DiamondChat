@@ -5,6 +5,7 @@ import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
@@ -55,7 +56,6 @@ public abstract class CommandSuggestionsMixin {
     @Nullable
     private CommandSuggestions.@Nullable SuggestionsList suggestions;
 
-    @Shadow
     protected abstract void updateUsageInfo();
 
     @Shadow
@@ -137,8 +137,8 @@ public abstract class CommandSuggestionsMixin {
      * It safely strips trailing decimal zeroes for integer results and re-adjusts the cursor to the end of the string.
      */
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    public void onTabMathEval(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if (keyCode == GLFW.GLFW_KEY_TAB && suggestions == null) {
+    public void onTabMathEval(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (event.key() == GLFW.GLFW_KEY_TAB && suggestions == null) {
             String currentText = this.input.getValue();
             Matcher matcher = CHATMANAGER$MATH_PATTERN.matcher(currentText);
 
