@@ -158,7 +158,7 @@ public class ChatChannelEditOverlay {
 
     @EventSubscriber(event = InputEvent.MouseInputEvent.class)
     public void mouseInput(InputEvent.MouseInputEvent event) {
-        if (!(ScreenProvider.getScreen() instanceof ChatScreen)) return;
+        if (!(ScreenProvider.isChatScreen())) return;
         if (dragHandler.getCurrentMode() == DragMode.NONE) return;
         if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return;
 
@@ -212,7 +212,7 @@ public class ChatChannelEditOverlay {
     public void keyPress(InputEvent.KeyInputEvent event) {
         boolean active = event.getAction() == InputEvent.KeyInputEvent.Action.PRESS || event.getAction() == InputEvent.KeyInputEvent.Action.HOLDING;
 
-        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_CONTROL && ScreenProvider.getScreen() instanceof ChatScreen) {
+        if (event.getKeyCode() == GLFW.GLFW_KEY_LEFT_CONTROL && ScreenProvider.isChatScreen()) {
             if (active) {
                 if (dragHandler.getCurrentMode() == DragMode.NONE) dragHandler.setCurrentMode(DragMode.EDIT);
             } else {

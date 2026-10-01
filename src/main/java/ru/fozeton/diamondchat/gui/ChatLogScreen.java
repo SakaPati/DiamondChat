@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.diamondchat.gui.widgets.ChannelButton;
@@ -127,13 +128,13 @@ public class ChatLogScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, this.width, this.height, 0x8018181f);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         extractChannelButtons(graphics, mouseX, mouseY, partialTick);
     }
@@ -180,7 +181,7 @@ public class ChatLogScreen extends Screen {
         if (this.channelsScrollEnabled && isInsideChannelsArea(mouseX, mouseY)) {
             int maxOffset = Math.max(0, this.channelsContentWidth - this.channelsAreaWidth);
             this.channelsScrollOffset -= (int) (scrollY * SCROLL_STEP);
-            this.channelsScrollOffset = Math.max(0, Math.min(this.channelsScrollOffset, maxOffset));
+            this.channelsScrollOffset = Math.clamp(this.channelsScrollOffset, 0, maxOffset);
             repositionChannelButtons();
             return true;
         }

@@ -147,7 +147,7 @@ public class ChatHistoryWidget extends AbstractWidget {
             for (FormattedCharSequence textLine : cl.lines()) {
                 graphics.fill(getX(), rowY, getX() + this.width - 15, rowY + lineH, cl.bg());
                 graphics.fill(getX(), rowY, getX() + 2, rowY + lineH, cl.stripe());
-                graphics.text(font, textLine, getX() + 6, rowY + 2, -1, false);
+                graphics.text(font, textLine, getX() + 3, rowY + 2, -1, false);
                 rowY += lineH;
             }
 

@@ -22,6 +22,8 @@ public abstract class ChatHudRender {
             boolean changeCursorOnInsertions,
             CallbackInfo ci
     ) {
-        if (ChatRenderManager.getInstance().render(graphics, mouseX, mouseY, changeCursorOnInsertions)) ci.cancel();
+        boolean chatOpen = displayMode == ChatComponent.DisplayMode.FOREGROUND;
+
+        if (ChatRenderManager.getInstance().render(graphics, mouseX, mouseY, chatOpen)) ci.cancel();
     }
 }

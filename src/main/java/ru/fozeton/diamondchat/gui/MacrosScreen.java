@@ -1,11 +1,11 @@
 package ru.fozeton.diamondchat.gui;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.config.MacrosConfig;
+import ru.fozeton.diamondchat.gui.widgets.SearchEditBox;
 import ru.fozeton.diamondchat.gui.widgets.SimpleButton;
 
 import java.util.ArrayList;
@@ -21,6 +21,8 @@ public class MacrosScreen extends Screen {
     private static final int ROW_H = 20;
     private static final int ROW_GAP = 4;
     private static final int MAX_VISIBLE = 10;
+    private static final int DEFAULT_TIME = 30;
+    private static final int MAX_TIME = 86400; // сутки
     private static final int COL_BG = 0xFF212128;
     private static final int COL_DIVIDER = 0xFF2e2e3d;
     private static final int COL_MUTED = 0xFF6b6b88;
@@ -31,10 +33,11 @@ public class MacrosScreen extends Screen {
     private final MacrosConfig config;
     private final List<String> keys = new ArrayList<>();
 
-    private EditBox textInput;
-    private EditBox intervalInput;
+    private SearchEditBox textInput;
+    private SearchEditBox intervalInput;
 
     private int scrollOffset = 0;
+    private String editingKey = null;
 
     public MacrosScreen() {
         super(Component.literal("Макросы"));
@@ -46,6 +49,14 @@ public class MacrosScreen extends Screen {
         return s.length() > max ? s.substring(0, max - 1) + "…" : s;
     }
 
+    private static int parseTime(String raw, int fallback) {
+        try {
+            return Math.clamp(Integer.parseInt(raw.trim()), 1, MAX_TIME);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
     @Override
     protected void init() {
         int guiX = (this.width - GUI_W) / 2;
@@ -53,60 +64,124 @@ public class MacrosScreen extends Screen {
 
         int inputY = guiY + GUI_H - 60;
 
-        textInput = new EditBox(this.font, guiX + PAD, inputY, MACRO_W, ROW_H, Component.literal("!текст макроса..."));
+        textInput = new SearchEditBox(
+                this.font,
+                guiX + PAD,
+                inputY,
+                MACRO_W,
+                ROW_H,
+                Component.literal("Текст макроса")
+        );
         textInput.setMaxLength(256);
         textInput.setHint(Component.literal("!текст макроса..."));
         addRenderableWidget(textInput);
 
-        intervalInput = new EditBox(this.font, guiX + PAD + MACRO_W + 5, inputY, TIMER_W, ROW_H, Component.literal("сек..."));
+        intervalInput = new SearchEditBox(
+                this.font,
+                guiX + PAD + MACRO_W + 5,
+                inputY,
+                TIMER_W,
+                ROW_H,
+                Component.literal("Секунды")
+        );
+        intervalInput.setMaxLength(6);
+        intervalInput.setDigitsOnly();
         intervalInput.setHint(Component.literal("сек..."));
+        intervalInput.setOnEnter(this::addMacro);
         addRenderableWidget(intervalInput);
 
         int addX = guiX + PAD + MACRO_W + 5 + TIMER_W + 5;
         int addW = GUI_W - PAD - (MACRO_W + TIMER_W) - 20;
-        addRenderableWidget(SimpleButton.of(addX, inputY, addW, ROW_H, Component.literal("+ ДОБАВИТЬ"), COL_PURPLE, btn -> addMacro()));
+        addRenderableWidget(SimpleButton.of(
+                addX,
+                inputY,
+                addW,
+                ROW_H,
+                Component.literal("+ ДОБАВИТЬ"),
+                COL_PURPLE,
+                btn -> addMacro()
+        ));
 
         rebuildMacroButtons(guiX, guiY);
     }
 
     private void rebuildMacroButtons(int guiX, int guiY) {
         int startY = guiY + 80;
-        int visible = Math.min(keys.size(), MAX_VISIBLE);
-        int from = Math.min(scrollOffset, Math.max(0, keys.size() - MAX_VISIBLE));
+        scrollOffset = Math.clamp(scrollOffset, 0, Math.max(0, keys.size() - MAX_VISIBLE));
+        int to = Math.min(keys.size(), scrollOffset + MAX_VISIBLE);
 
-        for (int i = from; i < from + visible && i < keys.size(); i++) {
+        for (int i = scrollOffset; i < to; i++) {
             String key = keys.get(i);
             MacrosConfig.Macros m = config.getMacros().get(key);
             if (m == null) continue;
 
-            int rowY = startY + (i - from) * (ROW_H + ROW_GAP);
+            int rowY = startY + (i - scrollOffset) * (ROW_H + ROW_GAP);
+            int timerX = guiX + PAD + MACRO_W + 5;
 
             String label = truncate(key, 24) + (m.isActive() ? " ВКЛ" : " ВЫКЛ");
             int labelColor = m.isActive() ? COL_GREEN : COL_MUTED;
-            addRenderableWidget(SimpleButton.of(guiX + PAD, rowY, MACRO_W, ROW_H,
+            addRenderableWidget(SimpleButton.of(
+                    guiX + PAD, rowY, MACRO_W, ROW_H,
                     Component.literal(label), labelColor, btn -> {
                         m.setActive(!m.isActive());
                         ChatConfigManager.getInstance().save(config.getClass());
                         rebuildWidgets();
-                    }));
+                    }
+            ));
 
-            addRenderableWidget(SimpleButton.of(guiX + PAD + MACRO_W + 5, rowY, TIMER_W, ROW_H,
-                    Component.literal(m.getTime() + "с"), COL_MUTED, btn -> {
-                    }));
+            if (key.equals(editingKey)) {
+                SearchEditBox edit = new SearchEditBox(
+                        this.font,
+                        timerX,
+                        rowY,
+                        TIMER_W,
+                        ROW_H,
+                        Component.literal("Время")
+                );
+                edit.setMaxLength(6);
+                edit.setDigitsOnly();
+                edit.setValue(String.valueOf(m.getTime()));
+                edit.setOnEnter(() -> commitTime(m, edit.getValue()));
+                addRenderableWidget(edit);
+                setFocused(edit);
+                edit.setFocused(true);
+            } else {
+                addRenderableWidget(SimpleButton.of(
+                        timerX, rowY, TIMER_W, ROW_H,
+                        Component.literal(m.getTime() + "с"), COL_PURPLE, btn -> {
+                            editingKey = key;
+                            rebuildWidgets();
+                        }
+                ));
+            }
 
-            addRenderableWidget(SimpleButton.of(guiX + PAD + MACRO_W + 5 + TIMER_W + 5, rowY, DEL_W, ROW_H,
+            addRenderableWidget(SimpleButton.of(
+                    timerX + TIMER_W + 5, rowY, DEL_W, ROW_H,
                     Component.literal("✕"), COL_RED, btn -> {
                         config.getMacros().remove(key);
                         keys.remove(key);
+                        if (key.equals(editingKey)) editingKey = null;
                         ChatConfigManager.getInstance().save(config.getClass());
                         rebuildWidgets();
-                    }));
+                    }
+            ));
         }
     }
 
+    private void commitTime(MacrosConfig.Macros m, String raw) {
+        m.setTime(parseTime(raw, m.getTime()));
+        editingKey = null;
+        ChatConfigManager.getInstance().save(config.getClass());
+        rebuildWidgets();
+    }
+
     protected void rebuildWidgets() {
+        String text = textInput == null ? "" : textInput.getValue();
+        String interval = intervalInput == null ? "" : intervalInput.getValue();
         this.clearWidgets();
         this.init();
+        textInput.setValue(text);
+        intervalInput.setValue(interval);
     }
 
     @Override
@@ -140,7 +215,8 @@ public class MacrosScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (keys.size() > MAX_VISIBLE) {
-            scrollOffset = Math.max(0, Math.min(scrollOffset - (int) Math.signum(scrollY), keys.size() - MAX_VISIBLE));
+            scrollOffset = Math.clamp(scrollOffset - (long) Math.signum(scrollY), 0, keys.size() - MAX_VISIBLE);
+            editingKey = null;
             rebuildWidgets();
             return true;
         }
@@ -149,19 +225,16 @@ public class MacrosScreen extends Screen {
 
     private void addMacro() {
         String key = textInput.getValue().trim();
-        String rawTime = intervalInput.getValue().trim();
         if (key.isEmpty() || config.getMacros().containsKey(key)) return;
 
-        int time = 30;
-        try {
-            time = Math.max(1, Integer.parseInt(rawTime));
-        } catch (NumberFormatException ignored) {
-        }
+        int time = parseTime(intervalInput.getValue(), DEFAULT_TIME);
 
-        MacrosConfig.Macros entry = new MacrosConfig.Macros(time, true);
-        config.getMacros().put(key, entry);
+        config.getMacros().put(key, new MacrosConfig.Macros(time, true));
         keys.add(key);
         ChatConfigManager.getInstance().save(config.getClass());
+
+        textInput.setValue("");
+        intervalInput.setValue("");
         rebuildWidgets();
     }
 }

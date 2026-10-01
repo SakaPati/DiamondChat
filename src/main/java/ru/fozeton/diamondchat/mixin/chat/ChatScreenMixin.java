@@ -23,6 +23,7 @@ import ru.fozeton.chatmanager.config.MacrosConfig;
 import ru.fozeton.chatmanager.events.channel.ChannelVisibilityChangedEvent;
 import ru.fozeton.chatmanager.events.game.StylizeMessageEvent;
 import ru.fozeton.chatmanager.events.speech.VoskPartialResultEvent;
+import ru.fozeton.chatmanager.utils.stt.VoiceIndicator;
 import ru.fozeton.diamondchat.gui.CalculatorScreen;
 import ru.fozeton.diamondchat.gui.MacrosScreen;
 import ru.fozeton.diamondchat.gui.widgets.DropdownButtonWidget;
@@ -120,6 +121,7 @@ public class ChatScreenMixin extends Screen {
     @Inject(method = "removed", at = @At("HEAD"))
     private void chatmanager_core$unregisterBus(CallbackInfo ci) {
         ChatManagerCore.EVENT_BUS.unregister(this);
+        VoiceIndicator.finished();
     }
 
     @Unique

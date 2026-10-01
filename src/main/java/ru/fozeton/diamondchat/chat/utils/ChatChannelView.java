@@ -86,7 +86,7 @@ public class ChatChannelView {
         if (event.getAction() != 1) return;
 
         Minecraft client = Minecraft.getInstance();
-        if (!(ScreenProvider.getScreen() instanceof ChatScreen)) return;
+        if (!(ScreenProvider.isChatScreen())) return;
 
         double scale = client.getWindow().getGuiScale();
         double mouseX = event.getMouseX() / scale;
@@ -175,7 +175,7 @@ public class ChatChannelView {
 
         int newLinesCount = metrics.getLineSlots(newLine, renderer, viewWidth);
 
-        if (settings.isAutoScroll() || !(ScreenProvider.getScreen() instanceof ChatScreen)) scrollHandler.setScrollOffset(0);
+        if (settings.isAutoScroll() || !(ScreenProvider.isChatScreen())) scrollHandler.setScrollOffset(0);
         else {
             int totalLines = metrics.getTotalPixels(chatMessages.values(), renderer, viewWidth);
             int maxScroll = Math.max(0, totalLines - geometry.getViewHeight() + ChatMetrics.GIF_SPACING);
