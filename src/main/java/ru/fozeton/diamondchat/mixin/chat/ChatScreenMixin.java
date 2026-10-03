@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,12 +28,18 @@ import ru.fozeton.chatmanager.utils.stt.VoiceIndicator;
 import ru.fozeton.diamondchat.gui.CalculatorScreen;
 import ru.fozeton.diamondchat.gui.MacrosScreen;
 import ru.fozeton.diamondchat.gui.widgets.DropdownButtonWidget;
+import ru.fozeton.diamondchat.gui.widgets.GifPickerWidget;
 import ru.fozeton.diamondchat.gui.widgets.TabButtonWidget;
 
 import java.util.Map;
 
 @Mixin(ChatScreen.class)
 public class ChatScreenMixin extends Screen {
+    @Unique
+    private static final int GIF_ICON_W = 24;
+    @Unique
+    private static final int GIF_ICON_H = 10;
+
     @Unique
     private final AiStyleTextConfig styleTextConfig = ChatConfigManager.getInstance().getTextStyleConfig();
     @Unique
@@ -50,6 +57,9 @@ public class ChatScreenMixin extends Screen {
 
     @Unique
     private DropdownButtonWidget chats;
+
+    @Unique
+    private GifPickerWidget gifPicker;
 
     protected ChatScreenMixin(Component title) {
         super(title);
@@ -104,30 +114,63 @@ public class ChatScreenMixin extends Screen {
                 Component.literal("Стиль текста")
         );
 
-
         for (Map.Entry<String, AiStyleTextConfig.AiStyle> entry : styleTextConfig.getStyles().entrySet()) {
             this.aiStyleText.addItem(
                     entry.getKey(),
                     () -> ChatManagerCore.EVENT_BUS.activate(new StylizeMessageEvent(entry.getKey()))
             );
         }
+
+        // init вызывается и при ресайзе — старый виджет надо закрыть, чтобы не текли текстуры
+        if (this.gifPicker != null) this.gifPicker.close();
+        this.gifPicker = new GifPickerWidget(
+                this.width - GIF_ICON_W - 2, this.height - 13, GIF_ICON_W, GIF_ICON_H,
+                this::chatmanager$appendGif
+        );
     }
 
     @Inject(method = "init", at = @At("TAIL"))
     private void chatmanager_core$registerBus(CallbackInfo ci) {
         ChatManagerCore.EVENT_BUS.register(this);
+        this.input.setWidth(this.input.getWidth() - GIF_ICON_W - 4);
     }
 
     @Inject(method = "removed", at = @At("HEAD"))
     private void chatmanager_core$unregisterBus(CallbackInfo ci) {
         ChatManagerCore.EVENT_BUS.unregister(this);
         VoiceIndicator.finished();
+        if (this.gifPicker != null) {
+            this.gifPicker.close();
+            this.gifPicker = null;
+        }
+    }
+
+    @Unique
+    private void chatmanager$appendGif(String id) {
+        String value = this.input.getValue();
+        String sep = value.isEmpty() || value.endsWith(" ") ? "" : " ";
+        this.input.setValue(value + sep + ":" + id + ":");
+    }
+
+    /**
+     * Синхронизирует фокус экрана с полем поиска гифок: когда поиск в фокусе,
+     * экран отдаёт ему ввод символов, когда нет — возвращает фокус полю чата.
+     */
+    @Unique
+    private void chatmanager$syncGifFocus() {
+        if (this.gifPicker == null) return;
+        EditBox box = this.gifPicker.getSearchBox();
+        if (box.isFocused()) {
+            if (this.getFocused() != box) this.setFocused(box);
+        } else if (this.getFocused() == box) {
+            this.setFocused(this.input);
+        }
     }
 
     @Unique
     @EventSubscriber(event = VoskPartialResultEvent.class)
     public void onSendMessage(VoskPartialResultEvent event) {
-        if(!event.getPartialResult().isBlank()) input.setValue(event.getPartialResult());
+        if (!event.getPartialResult().isBlank()) input.setValue(event.getPartialResult());
     }
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))
@@ -136,10 +179,23 @@ public class ChatScreenMixin extends Screen {
         if (this.calculatorButton != null) this.calculatorButton.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.aiStyleText != null) this.aiStyleText.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.chats != null) this.chats.extractRenderState(graphics, mouseX, mouseY, delta);
+        // последним — чтобы панель гифок была поверх всего
+        if (this.gifPicker != null) this.gifPicker.extractRenderState(graphics, mouseX, mouseY, delta);
+        chatmanager$syncGifFocus();
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+        // первым — панель гифок перекрывает остальные виджеты
+        if (this.gifPicker != null) {
+            boolean handled = this.gifPicker.mouseClicked(event, doubleClick);
+            chatmanager$syncGifFocus();
+            if (handled) {
+                cir.setReturnValue(true);
+                return;
+            }
+        }
+
         if (this.macrosButton != null && this.macrosButton.mouseClicked(event, doubleClick))
             cir.setReturnValue(true);
 
@@ -151,5 +207,25 @@ public class ChatScreenMixin extends Screen {
 
         if (this.chats != null && this.chats.mouseClicked(event, doubleClick))
             cir.setReturnValue(true);
+    }
+
+    @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
+    private void onMouseScrolled(
+            double mouseX,
+            double mouseY,
+            double scrollX,
+            double scrollY,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (this.gifPicker != null && this.gifPicker.mouseScrolled(mouseX, mouseY, scrollX, scrollY))
+            cir.setReturnValue(true);
+    }
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (this.gifPicker != null && this.gifPicker.keyPressed(event)) {
+            chatmanager$syncGifFocus();
+            cir.setReturnValue(true);
+        }
     }
 }

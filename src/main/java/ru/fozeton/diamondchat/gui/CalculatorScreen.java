@@ -1,6 +1,5 @@
 package ru.fozeton.diamondchat.gui;
 
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -26,9 +25,9 @@ public class CalculatorScreen extends Screen {
     );
     private EditBox inpCur;
     private EditBox inpTgt;
-    private String resDiff = "—";
-    private String resMoney = "—";
-    private String resBlocks = "—";
+    private String resDiff = "-";
+    private String resMoney = "-";
+    private String resBlocks = "-";
 
     public CalculatorScreen() {
         super(Component.literal("Калькулятор уровней"));
@@ -67,7 +66,7 @@ public class CalculatorScreen extends Screen {
         String cs = inpCur.getValue().trim();
         String ts = inpTgt.getValue().trim();
         if (cs.isEmpty() || ts.isEmpty()) {
-            resetResults("—");
+            resetResults("-");
             return;
         }
         try {
@@ -120,7 +119,7 @@ public class CalculatorScreen extends Screen {
         graphics.fill(gx, gy, gx + GUI_W, gy + GUI_H, COL_BG);
         graphics.outline(gx, gy, GUI_W, GUI_H, COL_LINE);
 
-        graphics.text(font, "CALCULATOR — УРОВНИ", gx + 25, gy + 20, COL_HEADER, false);
+        graphics.text(font, "CALCULATOR - УРОВНИ", gx + 25, gy + 20, COL_HEADER, false);
         graphics.fill(gx + 25, gy + 40, gx + 335, gy + 41, COL_LINE);
 
         graphics.text(font, "ПАРАМЕТРЫ", gx + 25, gy + 53, COL_MUTED, false);

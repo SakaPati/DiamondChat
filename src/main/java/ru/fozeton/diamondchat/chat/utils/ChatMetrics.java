@@ -12,14 +12,14 @@ import ru.fozeton.chatmanager.messages.MessageType;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import static ru.fozeton.chatmanager.ChatManagerCore.GIF_PATTERN;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ChatMetrics {
     public static final int GIF_SPACING = 3;
     @Getter
     private static final ChatMetrics instance = new ChatMetrics();
-    public static final Pattern GIF_PATTERN = Pattern.compile(":\\d{15,19}:");
 
     public int getLineSlots(ChatChannelView.ChatLine chatLine, Font renderer, int viewWidth) {
         if (chatLine.message().getType() == MessageType.ANIMATED) {

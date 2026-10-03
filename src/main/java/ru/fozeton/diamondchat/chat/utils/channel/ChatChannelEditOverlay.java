@@ -4,7 +4,6 @@ import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import lombok.Getter;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;

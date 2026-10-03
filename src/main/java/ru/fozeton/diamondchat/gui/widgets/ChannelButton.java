@@ -22,8 +22,15 @@ public class ChannelButton extends AbstractButton {
     private final Runnable action;
     private final Supplier<Boolean> selectedCheck;
 
-    public ChannelButton(int x, int y, int width, int height, Component message,
-                         Runnable action, Supplier<Boolean> selectedCheck) {
+    public ChannelButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            Component message,
+            Runnable action,
+            Supplier<Boolean> selectedCheck
+    ) {
         super(x, y, width, height, message);
         this.action = action;
         this.selectedCheck = selectedCheck;

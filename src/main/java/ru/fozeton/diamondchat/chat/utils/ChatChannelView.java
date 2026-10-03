@@ -4,7 +4,6 @@ import com.ferra13671.megaevents.eventbus.EventSubscriber;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import ru.fozeton.chatmanager.ChatManagerCore;

@@ -5,7 +5,6 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import ru.fozeton.chatmanager.ChatManagerCore;
@@ -16,67 +15,116 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GifTexture {
     private static final Map<String, GifTexture> CACHE = new HashMap<>();
-    private final McAnimCodec.Animation animation;
-    private final Gif gif = Gif.getInstance();
+    private static final AtomicInteger ID_COUNTER = new AtomicInteger();
+    private static int pickerCounter = 0;
     private final Identifier location;
-    private final DynamicTexture texture;
-    private final NativeImage image;
+    private final AtomicBoolean closed = new AtomicBoolean();
+    private DynamicTexture texture;
+    private NativeImage image;
+    private McAnimCodec.Animation animation;
     @Getter
-    private final int width;
+    private int width = 16;
     @Getter
-    private final int height;
-    private final int totalDuration;
+    private int height = 16;
+    @Getter
+    private boolean failed;
+    private int totalDuration = 1000;
     private int currentFrameIndex = -1;
     private long animationStartTime = 0;
 
-    private GifTexture(String gifId) {
-        this.animation = loadOrDownloadAnimation(gifId);
-        this.width = animation.getWidth();
-        this.height = animation.getHeight();
-
-        this.image = new NativeImage(width, height, false);
-        this.texture = new DynamicTexture(() -> "diamondchat_voice", image);
-        this.location = Identifier.fromNamespaceAndPath("diamondchat", "dynamic/" + gifId);
-
-        Minecraft.getInstance().getTextureManager().register(location, texture);
-
-        this.totalDuration = calculateTotalDuration(animation);
-    }
-
-    private McAnimCodec.Animation loadOrDownloadAnimation(String gifId) {
-        try {
-            return readAnimation(gifId);
-        } catch (Exception firstAttempt) {
-            if (Boolean.FALSE.equals(gif.download(gifId).join())) {
-                throw new RuntimeException("Failed to download gif: " + gifId, firstAttempt);
+    public GifTexture(String gifId) {
+        this.location = Identifier.fromNamespaceAndPath("diamondchat", "dynamic/gif_" + ID_COUNTER.getAndIncrement());
+        loadOrDownloadAnimation(gifId).whenComplete((loaded, ex) -> Minecraft.getInstance().execute(() -> {
+            if (closed.get()) return;
+            if (ex != null || loaded == null) {
+                failed = true;
+                return;
             }
             try {
-                return readAnimation(gifId);
-            } catch (Exception afterDownload) {
-                throw new RuntimeException("Failed to read gif: " + gifId + " after download", afterDownload);
+                init(loaded);
+            } catch (Exception _) {
+                failed = true;
             }
+        }));
+    }
+
+    private GifTexture(McAnimCodec.Animation animation, String path) {
+        this.location = Identifier.fromNamespaceAndPath("diamondchat", path);
+        init(animation);
+    }
+
+    private static CompletableFuture<McAnimCodec.Animation> loadOrDownloadAnimation(String gifId) {
+        try {
+            return CompletableFuture.completedFuture(readAnimation(gifId));
+        } catch (Exception _) {
+            return Gif.getInstance().download(gifId)
+                    .thenApply(ok -> {
+                        if (!Boolean.TRUE.equals(ok)) {
+                            throw new RuntimeException("Failed to download gif: " + gifId);
+                        }
+                        try {
+                            return readAnimation(gifId);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to read gif: " + gifId + " after download", e);
+                        }
+                    });
         }
     }
 
-    private McAnimCodec.Animation readAnimation(String gifId) throws Exception {
+    private static McAnimCodec.Animation readAnimation(String gifId) throws Exception {
         Path path = ChatManagerCore.getConfigDir().resolve("cache").resolve(gifId + ".mcanim");
         return McAnimCodec.read(path);
     }
 
-    private int calculateTotalDuration(McAnimCodec.Animation animation) {
+    private static int calculateTotalDuration(McAnimCodec.Animation animation) {
         List<McAnimCodec.Frame> frames = animation.getFrames();
-        return frames.isEmpty() ? 1000 : frames.getLast().timestamp();
+        return frames.isEmpty() ? 1000 : Math.max(1, frames.getLast().timestamp());
     }
 
     public static GifTexture get(String gifId) {
         return CACHE.computeIfAbsent(gifId, GifTexture::new);
     }
 
+    public static GifTexture standalone(McAnimCodec.Animation animation) {
+        return new GifTexture(animation, "dynamic/picker/" + (pickerCounter++));
+    }
+
+    private void init(McAnimCodec.Animation loaded) {
+        this.width = loaded.getWidth();
+        this.height = loaded.getHeight();
+        this.totalDuration = calculateTotalDuration(loaded);
+
+        this.image = new NativeImage(width, height, false);
+        this.texture = new DynamicTexture(() -> "diamondchat_gif", image);
+        Minecraft.getInstance().getTextureManager().register(location, texture);
+
+        this.animation = loaded;
+    }
+
+    public boolean isReady() {
+        return animation != null;
+    }
+
+    public void close() {
+        closed.set(true);
+        if (texture != null) Minecraft.getInstance().getTextureManager().release(location);
+    }
+
     public void render(GuiGraphicsExtractor guiGraphics, int x, int y, float alpha) {
-        List<McAnimCodec.Frame> frames = animation.getFrames();
+        render(guiGraphics, x, y - height / 2, width / 2, height / 2, alpha);
+    }
+
+    public void render(GuiGraphicsExtractor guiGraphics, int x, int y, int w, int h, float alpha) {
+        McAnimCodec.Animation anim = this.animation;
+        if (anim == null) return;
+
+        List<McAnimCodec.Frame> frames = anim.getFrames();
         if (frames == null || frames.isEmpty()) return;
 
         long currentTime = System.currentTimeMillis();
@@ -87,11 +135,8 @@ public class GifTexture {
         int targetFrameIndex = resolveFrameIndex(frames, elapsedTime);
         if (targetFrameIndex != currentFrameIndex) {
             currentFrameIndex = targetFrameIndex;
-            uploadBytes(frames.get(currentFrameIndex).rgbaData());
+            uploadBytes(anim, frames.get(currentFrameIndex).rgbaData());
         }
-
-        int displayWidth = width / 2;
-        int displayHeight = height / 2;
 
         int alphaInt = (int) (alpha * 255.0f) & 0xFF;
         int color = (alphaInt << 24) | 0x00FFFFFF;
@@ -99,11 +144,10 @@ public class GifTexture {
         guiGraphics.blit(
                 RenderPipelines.GUI_TEXTURED,
                 this.location,
-                x, y - displayHeight,
+                x, y,
                 0.0F, 0.0F,
-                displayWidth, displayHeight,
-                displayWidth,
-                displayHeight,
+                w, h,
+                w, h,
                 color
         );
     }
@@ -117,9 +161,9 @@ public class GifTexture {
         return targetFrameIndex;
     }
 
-    private void uploadBytes(byte[] rgbaBytes) {
-        int animationWidth = animation.getWidth();
-        int animationHeight = animation.getHeight();
+    private void uploadBytes(McAnimCodec.Animation anim, byte[] rgbaBytes) {
+        int animationWidth = anim.getWidth();
+        int animationHeight = anim.getHeight();
         if (rgbaBytes.length < animationWidth * animationHeight * 4) return;
 
         for (int y = 0; y < animationHeight; y++) {

@@ -18,6 +18,7 @@ import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.PlayerMentionedEvent;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
+import ru.fozeton.chatmanager.module.Gif;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.PlaySounds;
 import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
@@ -134,11 +135,16 @@ public class ChatChannelMessageHandler {
             ChatChannelView.ChatLine chatLine,
             boolean isChatOpen
     ) {
-        Matcher matcher = ChatMetrics.GIF_PATTERN.matcher(chatLine.message().getPlainText());
+        Matcher matcher = ChatManagerCore.GIF_PATTERN.matcher(chatLine.message().getPlainText());
         if (!matcher.find()) return false;
 
         String gifId = matcher.group().replace(":", "");
         GifTexture gif = GifTexture.get(gifId);
+        if (gif.isFailed()) {
+            textRender(context, renderer, mouseX, mouseY, MessageType.SYSTEM, chatLine, isChatOpen);
+            return false;
+        }
+
         int gifHeight = gif.getHeight() / 2;
 
         Component cleanedContent = metrics.stripGifPattern(chatLine.message().getContent());
