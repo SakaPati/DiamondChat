@@ -18,7 +18,8 @@
   "entrypoints": {
     "client": [
       "ru.fozeton.diamondchat.DiamondChat"
-    ]
+    ],
+    "evo-plus": ["ru.fozeton.diamondchat.utils.ChatAddon"]
   },
   "mixins": [
     "diamondchat.mixins.json"

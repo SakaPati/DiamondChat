@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.fozeton.chatmanager.ChatManagerCore;
@@ -60,6 +61,9 @@ public class ChatScreenMixin extends Screen {
 
     @Unique
     private GifPickerWidget gifPicker;
+
+    @Unique
+    private int inputWidth;
 
     protected ChatScreenMixin(Component title) {
         super(title);
@@ -121,7 +125,6 @@ public class ChatScreenMixin extends Screen {
             );
         }
 
-        // init вызывается и при ресайзе — старый виджет надо закрыть, чтобы не текли текстуры
         if (this.gifPicker != null) this.gifPicker.close();
         this.gifPicker = new GifPickerWidget(
                 this.width - GIF_ICON_W - 2, this.height - 13, GIF_ICON_W, GIF_ICON_H,
@@ -132,7 +135,9 @@ public class ChatScreenMixin extends Screen {
     @Inject(method = "init", at = @At("TAIL"))
     private void chatmanager_core$registerBus(CallbackInfo ci) {
         ChatManagerCore.EVENT_BUS.register(this);
-        this.input.setWidth(this.input.getWidth() - GIF_ICON_W - 4);
+        int width = this.input.getWidth() - GIF_ICON_W - 2;
+        this.inputWidth = width;
+        this.input.setWidth(width - 5);
     }
 
     @Inject(method = "removed", at = @At("HEAD"))
@@ -152,10 +157,6 @@ public class ChatScreenMixin extends Screen {
         this.input.setValue(value + sep + ":" + id + ":");
     }
 
-    /**
-     * Синхронизирует фокус экрана с полем поиска гифок: когда поиск в фокусе,
-     * экран отдаёт ему ввод символов, когда нет — возвращает фокус полю чата.
-     */
     @Unique
     private void chatmanager$syncGifFocus() {
         if (this.gifPicker == null) return;
@@ -173,20 +174,30 @@ public class ChatScreenMixin extends Screen {
         if (!event.getPartialResult().isBlank()) input.setValue(event.getPartialResult());
     }
 
-    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    @Inject(method = "extractRenderState", at = @At("HEAD"))
     private void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (this.macrosButton != null) this.macrosButton.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.calculatorButton != null) this.calculatorButton.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.aiStyleText != null) this.aiStyleText.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.chats != null) this.chats.extractRenderState(graphics, mouseX, mouseY, delta);
-        // последним — чтобы панель гифок была поверх всего
         if (this.gifPicker != null) this.gifPicker.extractRenderState(graphics, mouseX, mouseY, delta);
         chatmanager$syncGifFocus();
     }
 
+    @ModifyArg(
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;fill(IIIII)V"
+            ),
+            index = 2
+    )
+    private int modifyFillArgs(int maxX) {
+        return inputWidth;
+    }
+
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
-        // первым — панель гифок перекрывает остальные виджеты
         if (this.gifPicker != null) {
             boolean handled = this.gifPicker.mouseClicked(event, doubleClick);
             chatmanager$syncGifFocus();

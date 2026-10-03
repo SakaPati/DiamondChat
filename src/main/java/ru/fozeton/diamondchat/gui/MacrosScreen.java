@@ -22,7 +22,7 @@ public class MacrosScreen extends Screen {
     private static final int ROW_GAP = 4;
     private static final int MAX_VISIBLE = 10;
     private static final int DEFAULT_TIME = 30;
-    private static final int MAX_TIME = 86400; // сутки
+    private static final int MAX_TIME = 86400;
     private static final int COL_BG = 0xFF212128;
     private static final int COL_DIVIDER = 0xFF2e2e3d;
     private static final int COL_MUTED = 0xFF6b6b88;

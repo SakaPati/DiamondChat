@@ -47,7 +47,7 @@ public abstract class CommandSuggestionsMixin {
 
     @Shadow
     @Final
-    EditBox input;
+    private EditBox input;
 
     @Shadow
     private @Nullable CompletableFuture<Suggestions> pendingSuggestions;
