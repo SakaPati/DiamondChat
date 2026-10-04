@@ -225,12 +225,16 @@ public class ChatScreenMixin extends Screen {
         if (!event.getPartialResult().isBlank()) input.setValue(event.getPartialResult());
     }
 
-    @Inject(method = "extractRenderState", at = @At("HEAD"))
+    @Inject(
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/components/CommandSuggestions;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V"
+            )
+    )
     private void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (this.macrosButton != null) this.macrosButton.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.calculatorButton != null) this.calculatorButton.extractRenderState(graphics, mouseX, mouseY, delta);
-        if (this.aiStyleText != null) this.aiStyleText.extractRenderState(graphics, mouseX, mouseY, delta);
-        if (this.chats != null) this.chats.extractRenderState(graphics, mouseX, mouseY, delta);
         if (this.gifPicker != null) this.gifPicker.extractRenderState(graphics, mouseX, mouseY, delta);
 
         boolean micHover = chatmanager$isOverMic(mouseX, mouseY);
@@ -243,6 +247,9 @@ public class ChatScreenMixin extends Screen {
                 micRecording ? MIC_ACTIVE_TEX : MIC_TEX,
                 micX, micY, 0f, 0f, MIC_SIZE, MIC_SIZE, MIC_SIZE, MIC_SIZE
         );
+
+        if (this.aiStyleText != null) this.aiStyleText.extractRenderState(graphics, mouseX, mouseY, delta);
+        if (this.chats != null) this.chats.extractRenderState(graphics, mouseX, mouseY, delta);
 
         chatmanager$syncGifFocus();
     }
