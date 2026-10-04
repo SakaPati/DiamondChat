@@ -11,7 +11,6 @@ import org.lwjgl.glfw.GLFW;
 public enum KeyBinds {
     OPEN_CHAT_HISTORY("key.diamondchat.chat_history", GLFW.GLFW_KEY_I),
     CLEAR_CHAT("key.diamondchat.clear_chat", GLFW.GLFW_KEY_DELETE),
-    TOGGLE_VOICE("key.diamondchat.toggle_voice", GLFW.GLFW_KEY_V),
     OPEN_VOICE_MODELS("key.diamondchat.voice_models", GLFW.GLFW_KEY_O);
 
     private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(

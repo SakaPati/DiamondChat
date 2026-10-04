@@ -27,7 +27,7 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "evo-plus": ">=3.3.2",
-    "chatmanager_core": ">=1.1.0",
+    "chatmanager_core": ">=1.2.0",
     "fabric-api": "*",
     "minecraft": "${minecraft_version}",
     "java": ">=25"

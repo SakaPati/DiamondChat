@@ -25,7 +25,6 @@ import ru.fozeton.diamondchat.utils.notify.Notification;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ChatHistoryWidget extends AbstractWidget {
@@ -57,15 +56,17 @@ public class ChatHistoryWidget extends AbstractWidget {
         final long buildId = currentBuildId.incrementAndGet();
         final boolean remapColors = this.useColorRemapper;
 
-        CompletableFuture.supplyAsync(() -> buildCache(searchQuery, channelId, remapColors))
-                .thenAcceptAsync(
-                        result -> {
-                            if (buildId != currentBuildId.get()) return;
-                            this.cachedLines = result.lines();
-                            this.fullHeight = result.totalHeight();
-                            scrollToBottom();
-                        }, Minecraft.getInstance()
-                );
+        Minecraft.getInstance().execute(() -> {
+            if (buildId != currentBuildId.get()) return;
+            try {
+                BuildResult result = buildCache(searchQuery, channelId, remapColors);
+                this.cachedLines = result.lines();
+                this.fullHeight = result.totalHeight();
+                scrollToBottom();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private BuildResult buildCache(String searchQuery, String channelId, boolean remapColors) {

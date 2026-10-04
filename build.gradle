@@ -34,7 +34,7 @@ dependencies {
     implementation "com.ferra13671:mega-events:1.7.1"
     include "com.ferra13671:mega-events:1.7.1"
 
-    implementation name: 'chatmanager_core-fabric-26.2', version: '1.1.0'
+    implementation name: 'chatmanager_core-fabric-26.2', version: '1.2.0'
     implementation("me.shedaniel.cloth:cloth-config-fabric:26.2.155") {
         exclude(group: "net.fabricmc.fabric-api")
     }

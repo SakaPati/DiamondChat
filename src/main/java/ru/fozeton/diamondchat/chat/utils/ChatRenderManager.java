@@ -7,9 +7,7 @@ import net.minecraft.world.entity.player.ChatVisiblity;
 import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
-import ru.fozeton.chatmanager.config.VoiceConfig;
 import ru.fozeton.chatmanager.utils.Logger;
-import ru.fozeton.chatmanager.utils.stt.VoiceIndicator;
 
 import java.util.ArrayList;
 import java.util.List;

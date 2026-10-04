@@ -15,6 +15,7 @@ import ru.fozeton.chatmanager.events.channel.ChannelVisibilityChangedEvent;
 import ru.fozeton.chatmanager.events.channel.MessageAddedToChannelEvent;
 import ru.fozeton.chatmanager.events.channel.MessageStackEvent;
 import ru.fozeton.chatmanager.messages.Message;
+import ru.fozeton.chatmanager.messages.MessageType;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
 import ru.fozeton.diamondchat.DiamondChat;
@@ -26,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.SequencedMap;
+import java.util.regex.Matcher;
 
 public class ChatChannelView {
     private final ChatChannel channel;
@@ -96,63 +98,74 @@ public class ChatChannelView {
         switch (button) {
             case 0 -> this.messageHandler.mouseClicked(mouseX, mouseY, button);
             case 1 -> {
-                int x = geometry.getX();
-                int y = geometry.getY();
-                int viewWidth = geometry.getViewWidth();
-                int viewHeight = geometry.getViewHeight();
+                String targetId = findMessageIdAt(mouseX, mouseY);
+                if (targetId == null) return;
 
-                if (mouseX < x - 10 || mouseX > x + viewWidth || mouseY < y || mouseY > y + viewHeight) {
-                    return;
-                }
+                channel.getMessages().stream()
+                        .filter(m -> m.getId().equals(targetId))
+                        .findFirst()
+                        .ifPresent(message -> {
+                            client.keyboardHandler.setClipboard(message.getContent().getString());
+                            Notification.showInfo("Сообщение скопировано успешно!", null);
+                        });
+            }
+        }
+    }
 
-                Font renderer = client.font;
-                int currentY = y + viewHeight;
+    private String findMessageIdAt(double mouseX, double mouseY) {
+        Font renderer = Minecraft.getInstance().font;
 
-                int maxVisible = settings.getMaxVisibleLine();
-                int renderedLinesCount = 0;
-                int skippedLines = 0;
-                String clickedMessageId = null;
+        int x = geometry.getX();
+        int y = geometry.getY();
+        int viewWidth = geometry.getViewWidth();
+        int viewHeight = geometry.getViewHeight();
 
-                for (ChatLine chatLine : chatMessages.values()) {
-                    List<FormattedCharSequence> lines = chatLine.texts();
+        if (mouseX < x - 10 || mouseX > x + viewWidth || mouseY < y || mouseY > y + viewHeight) return null;
 
-                    for (int j = lines.size() - 1; j >= 0; j--) {
-                        if (skippedLines < (int) scrollHandler.getScrollOffset()) {
-                            skippedLines++;
-                            continue;
+        int lineStep = renderer.lineHeight + 3;
+        int pixelOffset = (int) scrollHandler.getScrollOffset();
+        int currentY = y + viewHeight;
+
+        for (ChatLine chatLine : chatMessages.values()) {
+            Message message = chatLine.message();
+
+            if (message.getType() == MessageType.ANIMATED) {
+                Matcher matcher = ChatManagerCore.GIF_PATTERN.matcher(message.getPlainText());
+                if (matcher.find()) {
+                    GifTexture gif = GifTexture.get(matcher.group().replace(":", ""));
+                    if (!gif.isFailed()) {
+                        int textHeight = renderer.split(
+                                metrics.stripGifPattern(message.getContent()), viewWidth
+                        ).size() * lineStep;
+                        int gifBlockHeight = textHeight + gif.getHeight() / 2;
+                        int totalBlockHeight = gifBlockHeight + ChatMetrics.GIF_SPACING;
+
+                        currentY -= totalBlockHeight;
+                        int drawY = currentY + pixelOffset;
+
+                        if (drawY + totalBlockHeight < y) return null;
+
+                        if (mouseY >= drawY - 3 && mouseY <= drawY + gifBlockHeight) {
+                            return message.getId();
                         }
-
-                        currentY -= renderer.lineHeight + 3;
-                        renderedLinesCount++;
-
-                        if (currentY < y || (renderedLinesCount > maxVisible)) break;
-
-                        int minX = x - 10;
-                        int maxX = x + viewWidth;
-                        int minY = currentY - 3;
-                        int maxY = currentY + renderer.lineHeight;
-
-                        if (mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY) {
-                            clickedMessageId = chatLine.message().getId();
-                            break;
-                        }
+                        continue;
                     }
-                    if (currentY < y || renderedLinesCount > maxVisible || clickedMessageId != null) break;
                 }
+            }
 
-                if (clickedMessageId != null) {
-                    final String targetId = clickedMessageId;
-                    channel.getMessages().stream()
-                            .filter(m -> m.getId().equals(targetId))
-                            .findFirst()
-                            .ifPresent(message -> {
-                                String plainText = message.getContent().getString();
-                                client.keyboardHandler.setClipboard(plainText);
-                                Notification.showInfo("Сообщение скопировано успешно!", null);
-                            });
+            for (int j = 0; j < chatLine.texts().size(); j++) {
+                currentY -= lineStep;
+                int drawY = currentY + pixelOffset;
+
+                if (drawY < y - renderer.lineHeight) return null;
+
+                if (mouseY >= drawY - 3 && mouseY <= drawY + renderer.lineHeight) {
+                    return message.getId();
                 }
             }
         }
+
+        return null;
     }
 
     @EventSubscriber(event = MessageAddedToChannelEvent.class)
@@ -211,7 +224,7 @@ public class ChatChannelView {
         Component text = settings.isUseColorRemapper() ? colorRemapper.remap(updatedContent) : updatedContent;
         chatMessages.put(
                 message.getId(), new ChatLine(
-                        renderer.split(text, viewWidth),
+                        renderer.split(text, viewWidth).reversed(),
                         message,
                         message.getTimestamp()
                 )

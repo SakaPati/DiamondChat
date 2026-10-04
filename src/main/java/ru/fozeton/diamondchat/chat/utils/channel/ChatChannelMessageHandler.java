@@ -18,7 +18,6 @@ import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.PlayerMentionedEvent;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
-import ru.fozeton.chatmanager.module.Gif;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.PlaySounds;
 import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
@@ -295,38 +294,28 @@ public class ChatChannelMessageHandler {
         int y = geometry.getY();
         int viewWidth = geometry.getViewWidth();
         int viewHeight = geometry.getViewHeight();
-        int currentY = y + viewHeight;
 
         if (mouseX < x || mouseX > x + viewWidth || mouseY < y || mouseY > y + viewHeight) return null;
 
-        int maxVisible = channel.getMaxVisibleMessage();
-        int renderedLinesCount = 0;
-        int skippedLines = 0;
+        int lineStep = renderer.lineHeight + 3;
+        int pixelOffset = (int) scrollHandler.getScrollOffset();
+        int currentY = y + viewHeight;
 
         for (ChatChannelView.ChatLine chatLine : chatLines) {
-            List<FormattedCharSequence> lines = chatLine.texts();
+            for (FormattedCharSequence text : chatLine.texts()) {
+                currentY -= lineStep;
+                int drawY = currentY + pixelOffset;
 
-            for (FormattedCharSequence text : lines) {
-                if (skippedLines < (int) scrollHandler.getScrollOffset()) {
-                    skippedLines++;
-                    continue;
-                }
+                if (drawY < y - renderer.lineHeight) return null;
 
-                currentY -= renderer.lineHeight + 3;
-                renderedLinesCount++;
-
-                if (currentY < y || renderedLinesCount > maxVisible) break;
-
-                if (mouseY >= currentY && mouseY <= currentY + renderer.lineHeight) {
+                if (mouseY >= drawY && mouseY <= drawY + renderer.lineHeight) {
                     ActiveTextCollector.ClickableStyleFinder finder =
                             new ActiveTextCollector.ClickableStyleFinder(renderer, (int) mouseX, (int) mouseY);
-                    finder.accept(x, currentY, text);
+                    finder.accept(x, drawY, text);
                     return finder.result();
                 }
             }
-            if (currentY < y || renderedLinesCount > maxVisible) break;
         }
-
         return null;
     }
 

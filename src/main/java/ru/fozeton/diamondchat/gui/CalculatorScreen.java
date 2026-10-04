@@ -1,12 +1,12 @@
 package ru.fozeton.diamondchat.gui;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.dargen.evoplus.api.EvoPlusApi;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.diamondchat.configs.LevelsConfig;
+import ru.fozeton.diamondchat.gui.widgets.SearchEditBox;
 
 import java.util.Map;
 
@@ -23,8 +23,8 @@ public class CalculatorScreen extends Screen {
             LevelsConfig.class,
             "assets/data/"
     );
-    private EditBox inpCur;
-    private EditBox inpTgt;
+    private SearchEditBox inpCur;
+    private SearchEditBox inpTgt;
     private String resDiff = "-";
     private String resMoney = "-";
     private String resBlocks = "-";
@@ -51,13 +51,15 @@ public class CalculatorScreen extends Screen {
         int gx = (this.width - GUI_W) / 2;
         int gy = (this.height - GUI_H) / 2;
 
-        inpCur = new EditBox(font, gx + 126, gy + 70, 209, 21, Component.literal(""));
+        inpCur = new SearchEditBox(font, gx + 126, gy + 70, 209, 21, Component.literal(""));
         inpCur.setHint(Component.literal("текущий уровень"));
+        inpCur.setDigitsOnly();
         inpCur.setResponder(s -> calculate());
         addRenderableWidget(inpCur);
 
-        inpTgt = new EditBox(font, gx + 126, gy + 92, 209, 21, Component.literal(""));
+        inpTgt = new SearchEditBox(font, gx + 126, gy + 92, 209, 21, Component.literal(""));
         inpTgt.setHint(Component.literal("целевой уровень"));
+        inpTgt.setDigitsOnly();
         inpTgt.setResponder(s -> calculate());
         addRenderableWidget(inpTgt);
     }
@@ -112,7 +114,6 @@ public class CalculatorScreen extends Screen {
 
     @Override
     public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
-        super.extractRenderState(graphics, mouseX, mouseY, a);
         int gx = (this.width - GUI_W) / 2;
         int gy = (this.height - GUI_H) / 2;
 
@@ -149,5 +150,6 @@ public class CalculatorScreen extends Screen {
         graphics.text(font, resBlocks, gx + 135, gy + 192, COL_LIGHT, false);
 
         graphics.text(font, "Результат обновляется автоматически", gx + 25, gy + 248, 0xFF434354, false);
+        super.extractRenderState(graphics, mouseX, mouseY, a);
     }
 }

@@ -7,7 +7,9 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.module.Gif;
@@ -37,6 +39,8 @@ public class GifPickerWidget extends AbstractWidget {
     private static final int SEARCH_H = 16;
     private static final int FOOTER_H = 12;
     private static final int ICON_GAP = 2;
+    private static final int ICON_TEX_W = 24;
+    private static final int ICON_TEX_H = 10;
     private static final int MAX_PARALLEL = 4;
     private static final int SCROLL_STEP = 45;
     private static final long SEARCH_DEBOUNCE_MS = 350;
@@ -46,15 +50,21 @@ public class GifPickerWidget extends AbstractWidget {
     private static final int COL_MUTED = 0xFF6b6b88;
     private static final int COL_PURPLE = 0xFF7c6ef5;
     private static final int COL_BORDER = 0xFF3a2e6e;
-    private static final int COL_BORDER_HOVER = 0xFF5a4a9e;
-    private static final int COL_TEXT_ACTIVE = 0xFFa78bfa;
-    private static final int COL_TEXT_HOVER = 0xFF8878cc;
-    private static final int COL_ICON_BG = 0xFF18181f;
     private static final int COL_TRACK = 0xFF2e2e3d;
 
     private static final ExecutorService IO = Executors.newVirtualThreadPerTaskExecutor();
     private static final Semaphore SLOTS = new Semaphore(MAX_PARALLEL);
     private static final AtomicInteger COUNTER = new AtomicInteger();
+
+    private static final Identifier GIF_TEX = Identifier.fromNamespaceAndPath(
+            "diamondchat",
+            "textures/gui/gif.png"
+    );
+
+    private static final Identifier GIF_HOVER_TEX = Identifier.fromNamespaceAndPath(
+            "diamondchat",
+            "textures/gui/gif_hover.png"
+    );
 
     private final Consumer<String> onSelect;
     @Getter
@@ -98,7 +108,13 @@ public class GifPickerWidget extends AbstractWidget {
         this.onSelect = onSelect;
 
         this.searchBox = new SearchEditBox(
-                Minecraft.getInstance().font, 0, 0, 100, SEARCH_H, Component.literal("Search"));
+                Minecraft.getInstance().font,
+                0,
+                0,
+                100,
+                SEARCH_H,
+                Component.literal("Search")
+        );
         this.searchBox.setHint(Component.literal("Search KLIPY..."));
         this.searchBox.setMaxLength(64);
         this.searchBox.setResponder(text -> {
@@ -166,30 +182,35 @@ public class GifPickerWidget extends AbstractWidget {
 
         CompletableFuture
                 .supplyAsync(
-                        () -> q.isEmpty() ? Gif.getInstance().trending(nextPage) : Gif.getInstance().search(q, nextPage),
+                        () -> q.isEmpty() ? Gif.getInstance().trending(nextPage) : Gif.getInstance().search(
+                                q,
+                                nextPage
+                        ),
                         IO
                 )
-                .whenCompleteAsync((r, ex) -> {
-                    if (closed || g != gen) return;
-                    fetching = false;
-                    if (ex != null) {
-                        error = true;
-                        return;
-                    }
-                    try {
-                        int added = 0;
-                        for (Item it : toItems(r)) {
-                            if (seen.add(it.id())) {
-                                items.add(it);
-                                added++;
+                .whenCompleteAsync(
+                        (r, ex) -> {
+                            if (closed || g != gen) return;
+                            fetching = false;
+                            if (ex != null) {
+                                error = true;
+                                return;
                             }
-                        }
-                        page = nextPage;
-                        if (added == 0) hasMore = false;
-                    } catch (Exception e) {
-                        error = true;
-                    }
-                }, Minecraft.getInstance());
+                            try {
+                                int added = 0;
+                                for (Item it : toItems(r)) {
+                                    if (seen.add(it.id())) {
+                                        items.add(it);
+                                        added++;
+                                    }
+                                }
+                                page = nextPage;
+                                if (added == 0) hasMore = false;
+                            } catch (Exception e) {
+                                error = true;
+                            }
+                        }, Minecraft.getInstance()
+                );
     }
 
     private void load(Item item) {
@@ -354,13 +375,11 @@ public class GifPickerWidget extends AbstractWidget {
     }
 
     private void renderIcon(GuiGraphicsExtractor g, boolean hover) {
-        g.fill(getX(), getY(), getX() + width, getY() + height, COL_ICON_BG);
-        g.outline(getX(), getY(), width, height, open ? COL_PURPLE : hover ? COL_BORDER_HOVER : COL_BORDER);
-
-        var font = Minecraft.getInstance().font;
-        String label = "GIF";
-        int color = open ? COL_TEXT_ACTIVE : hover ? COL_TEXT_HOVER : COL_MUTED;
-        g.text(font, label, getX() + (width - font.width(label)) / 2, getY() + (height - 8) / 2 + 1, color, false);
+        g.blit(
+                RenderPipelines.GUI_TEXTURED,
+                open || hover ? GIF_HOVER_TEX : GIF_TEX,
+                getX(), getY(), 0f, 0f, ICON_TEX_W, ICON_TEX_H, ICON_TEX_W, ICON_TEX_H
+        );
     }
 
     private void renderPopup(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {

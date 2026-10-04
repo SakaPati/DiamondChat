@@ -49,20 +49,21 @@ public class ChatChannelScrollHandler {
 
         Font renderer = Minecraft.getInstance().font;
 
-        int linesInView = (int) (viewHeight / 1.4);
-        int totalLines = metrics.getTotalPixels(chatLines, renderer, viewWidth);
+        int totalPixels = metrics.getTotalPixels(chatLines, renderer, viewWidth);
 
-        if (totalLines <= linesInView) return;
+        int scrollRange = totalPixels - viewHeight + 3;
+        if (scrollRange <= 0) return;
 
         int paddingTop = 10;
         int paddingBot = 10;
         int trackH = viewHeight - paddingTop - paddingBot;
-        int scrollBarH = Math.max(10, (int) ((float) trackH * viewHeight / totalLines));
-        int maxScroll = trackH - scrollBarH;
-        int scrollBarY =
-                y + paddingTop + (int) (maxScroll * (1.0 - scrollOffset / Math.max(1, totalLines - viewHeight + 3)));
+        int scrollBarH = Math.clamp((int) ((float) trackH * viewHeight / totalPixels), 10, trackH);
+        int travel = trackH - scrollBarH;
 
-        context.fill(x + viewWidth - 2, scrollBarY, x + viewWidth - 4, scrollBarY + scrollBarH, scrollHex);
+        double progress = Math.clamp(scrollOffset / scrollRange, 0.0, 1.0);
+        int scrollBarY = y + paddingTop + (int) (travel * (1.0 - progress));
+
+        context.fill(x + viewWidth - 4, scrollBarY, x + viewWidth - 2, scrollBarY + scrollBarH, scrollHex);
     }
 
     @EventSubscriber(event = InputEvent.MouseScrollEvent.class)
