@@ -95,13 +95,10 @@ public class ChatChannelDragHandler {
                 }
             }
 
-            int prevW = geometry.getViewWidth();
             geometry.setWidth(newW * 2);
             geometry.setHeight(newH * 2);
             geometry.setX(newX);
             geometry.setY(newY);
-
-            if (prevW != newW) geometry.rebuildLines(renderer, newW);
         }
     }
 

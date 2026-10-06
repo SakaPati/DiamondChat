@@ -16,6 +16,7 @@ import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
+import ru.fozeton.chatmanager.messages.metadata.MessageMetadata;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.compat.Graphics26_2;
 import ru.fozeton.chatmanager.utils.compat.providers.GraphicsProvider;
@@ -49,7 +50,7 @@ public class ChatHistoryWidget extends AbstractWidget {
 
     public ChatHistoryWidget(int x, int y, int width, int height) {
         super(x, y, width, height, Component.empty());
-        this.blinkHex = Long.decode(settings.getHistoryChat().getBlinkColor()).intValue();
+        this.blinkHex = settings.getHistoryChat().getBlinkColor();
     }
 
     public void updateCacheAsync(String searchQuery, String channelId) {
@@ -90,12 +91,13 @@ public class ChatHistoryWidget extends AbstractWidget {
                     case PLAYER, CLIENT, CUSTOM -> 0xFFffffff;
                     default -> 0xFF7c6ef5;
                 };
+                int backgroundColor = settings.getHistoryChat().getBackgroundColor();
 
-                int backgroundColor = Long.decode(settings.getHistoryChat().getBackgroundColor()).intValue();
-                Map<String, Object> metadata = message.getMetadata();
-
-                if (metadata.get("lineColor") instanceof String s) backgroundColor = Long.decode(s).intValue();
-                if (metadata.get("borderColor") instanceof String s) baseStripe = Long.decode(s).intValue();
+                MessageMetadata meta = message.getMetadata().get(MessageMetadata.class).orElse(null);
+                if (meta != null) {
+                    if (meta.getLineColor() != 0) backgroundColor = meta.getLineColor();
+                    if (meta.getBorderColor() != 0) baseStripe = meta.getBorderColor();
+                }
 
                 int finalBg = message.getType() == MessageType.MENTIONED ? blinkHex : backgroundColor;
                 int finalStripe = message.getType() == MessageType.MENTIONED ? 0xFFc4a020 : baseStripe;
@@ -113,8 +115,15 @@ public class ChatHistoryWidget extends AbstractWidget {
     }
 
     private boolean matchesFilter(Message message, String channelId, String query) {
-        if (channelId != null && !channelId.equals(message.getMetadata().get("channelId"))) return false;
-        return query == null || query.isEmpty() || message.getPlainText().toLowerCase().contains(query.toLowerCase());
+        if (channelId != null) {
+            boolean sameChannel = message.getChannel()
+                    .map(ChatChannel::getId)
+                    .filter(channelId::equals)
+                    .isPresent();
+            if (!sameChannel) return false;
+        }
+        return query == null || query.isEmpty()
+               || message.getFullPlain().toLowerCase().contains(query.toLowerCase());
     }
 
     private void scrollToBottom() {
@@ -195,7 +204,7 @@ public class ChatHistoryWidget extends AbstractWidget {
                 thumbY + 1,
                 trackX + BAR_W,
                 thumbY + thumbH - 1,
-                hov ? COL_THUMB_HOV : Long.decode(settings.getHistoryChat().getScrollColor()).intValue()
+                hov ? COL_THUMB_HOV : settings.getHistoryChat().getScrollColor()
         );
     }
 

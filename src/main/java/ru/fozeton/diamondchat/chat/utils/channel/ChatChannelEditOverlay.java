@@ -151,7 +151,7 @@ public class ChatChannelEditOverlay {
     }
 
     private void renderHandle(GuiGraphicsExtractor ctx, int x, int y, int w, int h, boolean hovered) {
-        ctx.fill(x, y, x + w, y + h, hovered ? Long.decode(settings.getEditMode().getMarkHover()).intValue() : Long.decode(settings.getEditMode().getMarkColor()).intValue());
+        ctx.fill(x, y, x + w, y + h, hovered ? settings.getEditMode().getMarkHover() : settings.getEditMode().getMarkColor());
         ctx.outline(x, y, w, h, 0xFF3a2f8a);
     }
 

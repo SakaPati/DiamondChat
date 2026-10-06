@@ -2,17 +2,9 @@ package ru.fozeton.diamondchat.chat.utils.channel;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.client.gui.Font;
-import net.minecraft.network.chat.Component;
 import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.config.ChatConfigManager;
-import ru.fozeton.chatmanager.messages.Message;
-import ru.fozeton.chatmanager.utils.MessageColorRemapper;
-import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Getter
 @Setter
@@ -21,19 +13,12 @@ public class ChatChannelGeometry {
     public static final int MIN_VIEW_H = 40;
     private final ChatChannel channel;
     private final ChannelsConfig.ChannelSettings settings;
-    private final Map<String, ChatChannelView.ChatLine> chatMessages;
-    private final MessageColorRemapper colorRemapper = MessageColorRemapper.getInstance();
 
     private int x, y, width, height;
 
-    public ChatChannelGeometry(
-            ChatChannel channel,
-            ChannelsConfig.ChannelSettings settings,
-            Map<String, ChatChannelView.ChatLine> chatMessages
-    ) {
+    public ChatChannelGeometry(ChatChannel channel, ChannelsConfig.ChannelSettings settings) {
         this.channel = channel;
         this.settings = settings;
-        this.chatMessages = chatMessages;
         this.x = settings.getX();
         this.y = settings.getY();
         this.width = settings.getWidth();
@@ -46,31 +31,6 @@ public class ChatChannelGeometry {
 
     public int getViewHeight() {
         return height / 2;
-    }
-
-    public void rebuildLines(Font renderer, int newViewWidth) {
-        Map<String, ChatChannelView.ChatLine> rebuilt = new LinkedHashMap<>();
-        for (ChatChannelView.ChatLine cl : chatMessages.values()) {
-            Message msg = channel.getMessages().stream()
-                    .filter(m -> m.getId().equals(cl.message().getId()))
-                    .findFirst()
-                    .orElse(null);
-            if (msg == null) {
-                rebuilt.put(cl.message().getId(), cl);
-                continue;
-            }
-            Component text = settings.isUseColorRemapper() ? colorRemapper.remap(msg.getContent()) : msg.getContent();
-            rebuilt.put(
-                    cl.message().getId(),
-                    new ChatChannelView.ChatLine(
-                            renderer.split(text, newViewWidth),
-                            cl.message(),
-                            cl.timestamp()
-                    )
-            );
-        }
-        chatMessages.clear();
-        chatMessages.putAll(rebuilt);
     }
 
     public void persistDimensions() {

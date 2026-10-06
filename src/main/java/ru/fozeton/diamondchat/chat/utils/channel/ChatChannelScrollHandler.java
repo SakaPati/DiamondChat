@@ -8,16 +8,14 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.lwjgl.glfw.GLFW;
 import ru.fozeton.chatmanager.ChatManagerCore;
+import ru.fozeton.chatmanager.channel.ChatChannel;
 import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.InputEvent;
-import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.chat.utils.ChatMetrics;
-
-import java.util.Collection;
 
 public class ChatChannelScrollHandler {
     private final ChannelsConfig.ChannelSettings settings;
-    private final Collection<ChatChannelView.ChatLine> chatLines;
+    private final ChatChannel channel;
     private final ChatChannelGeometry geometry;
     private final ChatMetrics metrics = ChatMetrics.getInstance();
     private final int scrollHex;
@@ -29,13 +27,13 @@ public class ChatChannelScrollHandler {
 
     public ChatChannelScrollHandler(
             ChannelsConfig.ChannelSettings settings,
-            Collection<ChatChannelView.ChatLine> chatLines,
+            ChatChannel channel,
             ChatChannelGeometry geometry
     ) {
         this.settings = settings;
-        this.chatLines = chatLines;
+        this.channel = channel;
         this.geometry = geometry;
-        this.scrollHex = (int) Long.decode(settings.getScrollColor()).longValue();
+        this.scrollHex = (int) ((Number) settings.getScrollColor()).longValue();
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
@@ -47,9 +45,7 @@ public class ChatChannelScrollHandler {
         int viewWidth = geometry.getViewWidth();
         int viewHeight = geometry.getViewHeight();
 
-        Font renderer = Minecraft.getInstance().font;
-
-        int totalPixels = metrics.getTotalPixels(chatLines, renderer, viewWidth);
+        int totalPixels = totalPixels(viewWidth);
 
         int scrollRange = totalPixels - viewHeight + 3;
         if (scrollRange <= 0) return;
@@ -77,14 +73,11 @@ public class ChatChannelScrollHandler {
         int viewWidth = geometry.getViewWidth();
         int viewHeight = geometry.getViewHeight();
 
-        Font renderer = Minecraft.getInstance().font;
-
         if (mouseX < x || mouseX > x + viewWidth || mouseY < y || mouseY > y + viewHeight) return;
 
         if (isPressedShift) vertical *= 5;
 
-        int totalPixels = metrics.getTotalPixels(chatLines, renderer, viewWidth);
-        int maxScroll = Math.max(0, totalPixels - viewHeight + 3);
+        int maxScroll = Math.max(0, totalPixels(viewWidth) - viewHeight + 3);
         scrollOffset = Math.clamp((int) (scrollOffset + vertical * 12), 0, maxScroll);
     }
 
@@ -98,5 +91,10 @@ public class ChatChannelScrollHandler {
 
     public void resetScroll() {
         scrollOffset = 0;
+    }
+
+    private int totalPixels(int viewWidth) {
+        Font renderer = Minecraft.getInstance().font;
+        return channel.withMessages(messages -> metrics.getTotalPixels(messages, renderer, viewWidth));
     }
 }

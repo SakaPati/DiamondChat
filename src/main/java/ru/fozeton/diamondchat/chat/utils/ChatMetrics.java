@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
 
 import java.util.Collection;
@@ -21,28 +22,28 @@ public final class ChatMetrics {
     @Getter
     private static final ChatMetrics instance = new ChatMetrics();
 
-    public int getLineSlots(ChatChannelView.ChatLine chatLine, Font renderer, int viewWidth) {
-        if (chatLine.message().getType() == MessageType.ANIMATED) {
-            Matcher matcher = GIF_PATTERN.matcher(chatLine.message().getPlainText());
+    public int getLineSlots(Message message, Font renderer, int viewWidth) {
+        if (message.getType() == MessageType.ANIMATED) {
+            Matcher matcher = GIF_PATTERN.matcher(message.getFullPlain());
             if (matcher.find()) {
                 String gifId = matcher.group().replace(":", "");
                 GifTexture gif = GifTexture.get(gifId);
                 int gifHeight = gif.getHeight() / 2;
 
                 int lineStep = renderer.lineHeight + 3;
-                Component cleanedContent = stripGifPattern(chatLine.message().getContent());
+                Component cleanedContent = stripGifPattern(message.getContent());
                 int textLines = renderer.split(cleanedContent, viewWidth).size();
                 int textBlockHeight = textLines * lineStep;
 
                 return textBlockHeight + gifHeight + GIF_SPACING;
             }
         }
-        return chatLine.texts().size() * 12;
+        return message.getSplitLines(renderer, viewWidth).size() * 12;
     }
 
-    public int getTotalPixels(Collection<ChatChannelView.ChatLine> chatLines, Font renderer, int viewWidth) {
+    public int getTotalPixels(Collection<Message> messages, Font renderer, int viewWidth) {
         int total = 0;
-        for (ChatChannelView.ChatLine line : chatLines) total += getLineSlots(line, renderer, viewWidth);
+        for (Message message : messages) total += getLineSlots(message, renderer, viewWidth);
 
         return total;
     }

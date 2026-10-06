@@ -26,10 +26,6 @@ public class VoiceIndicatorWidget {
         this.element.setEnabled(true);
     }
 
-    private static int argb(String hex) {
-        return Long.decode(hex).intValue();
-    }
-
     public static WidgetElement register(SettingContainer container) {
         return new VoiceIndicatorWidget(container).element;
     }
@@ -52,14 +48,14 @@ public class VoiceIndicatorWidget {
     }
 
     private void render(RenderContext ctx) {
-        int background = argb(voiceCfg.getBackgroundColor());
+        int background = voiceCfg.getBackgroundColor();
 
         if (ctx.isEditing()) {
             drawPanel(
                     ctx,
                     background,
-                    argb(voiceCfg.getBorderColorDefault()),
-                    argb(voiceCfg.getDefaultColor()),
+                    voiceCfg.getBorderColorDefault(),
+                    voiceCfg.getDefaultColor(),
                     i -> 0.5
             );
             return;
@@ -70,15 +66,15 @@ public class VoiceIndicatorWidget {
                     long now = System.currentTimeMillis();
 
                     int border = switch (frame.state()) {
-                        case LISTENING -> argb(voiceCfg.getBorderColorListening());
+                        case LISTENING -> voiceCfg.getBorderColorListening();
                         case ERROR -> 0xFFc04060;
-                        default -> argb(voiceCfg.getBorderColorDefault());
+                        default -> voiceCfg.getBorderColorDefault();
                     };
 
                     int color = switch (frame.state()) {
-                        case LOADING -> argb(voiceCfg.getLoadingColor());
-                        case LISTENING -> argb(voiceCfg.getListeningColor());
-                        default -> argb(voiceCfg.getDefaultColor());
+                        case LOADING -> voiceCfg.getLoadingColor();
+                        case LISTENING -> voiceCfg.getListeningColor();
+                        default -> voiceCfg.getDefaultColor();
                     };
 
                     drawPanel(

@@ -51,7 +51,7 @@ public class Handler extends MessageHandlingChannel {
 
     @Override
     protected boolean onPreProcess(Message message) {
-        log.debug("Получено сообщение чата от '" + message.getAuthor() + "': " + message.getPlainText());
+        log.debug("Получено сообщение чата от '" + message.getAuthor() + "': " + message.getFullPlain());
 
         for (MessageHandler handler : getHandlers()) {
             if (handler instanceof ActionHandler) handler.action(message);

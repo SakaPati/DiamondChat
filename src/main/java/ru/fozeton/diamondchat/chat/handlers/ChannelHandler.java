@@ -18,6 +18,6 @@ public class ChannelHandler implements MessageHandler {
     @Override
     public boolean action(Message message) {
         if(action != null) action.run();
-        return pattern.matcher(message.getPlainText()).find();
+        return pattern.matcher(message.getFullPlain()).find();
     }
 }

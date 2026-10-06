@@ -1,6 +1,7 @@
 package ru.fozeton.diamondchat.chat.utils;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import ru.fozeton.chatmanager.messages.ChatMessageParser;
 import ru.fozeton.chatmanager.messages.Message;
@@ -27,17 +28,18 @@ public class DefaultMessage implements ChatMessageParser {
 
         MessageType type = MessageType.SYSTEM;
 
-        if (content.getStyle().getColor() != null) {
-            String colorName = content.getStyle().getColor().serialize();
+        TextColor color = content.getStyle().getColor();
+        if (color != null) {
+            String colorName = color.serialize();
             boolean isRedError = "red".equals(colorName) || "dark_red".equals(colorName);
             if (isRedError) type = MessageType.ERROR;
         }
 
         return new Message(
-                UUID.randomUUID().toString(),
+                UUID.randomUUID(),
                 author,
+                content,
                 useTimeFormatter(content),
-                cleaned,
                 type,
                 Instant.now()
         );

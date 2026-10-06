@@ -15,7 +15,7 @@ public class ActionHandler implements MessageHandler {
 
     @Override
     public boolean action(Message message) {
-        Matcher matcher = pattern.matcher(message.getPlainText());
+        Matcher matcher = pattern.matcher(message.getFullPlain());
 
         if(matcher.find()) {
             consumer.accept(matcher);

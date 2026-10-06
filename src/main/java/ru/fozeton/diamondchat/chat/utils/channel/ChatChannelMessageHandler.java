@@ -18,20 +18,19 @@ import ru.fozeton.chatmanager.config.ChannelsConfig;
 import ru.fozeton.chatmanager.events.PlayerMentionedEvent;
 import ru.fozeton.chatmanager.messages.Message;
 import ru.fozeton.chatmanager.messages.MessageType;
+import ru.fozeton.chatmanager.messages.metadata.MessageMetadata;
 import ru.fozeton.chatmanager.utils.MessageColorRemapper;
 import ru.fozeton.chatmanager.utils.PlaySounds;
 import ru.fozeton.chatmanager.utils.compat.providers.ScreenProvider;
-import ru.fozeton.diamondchat.chat.utils.ChatChannelView;
 import ru.fozeton.diamondchat.chat.utils.ChatMetrics;
 import ru.fozeton.diamondchat.chat.utils.GifTexture;
 import ru.fozeton.diamondchat.events.gui.GuiOpenEvent;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.regex.Matcher;
 
 public class ChatChannelMessageHandler {
@@ -40,7 +39,6 @@ public class ChatChannelMessageHandler {
     private final PlaySounds sounds = PlaySounds.getInstance();
     private final ChatChannel channel;
     private final ChannelsConfig.ChannelSettings settings;
-    private final Collection<ChatChannelView.ChatLine> chatLines;
     private final ChatChannelDragHandler dragHandler;
     private final ChatChannelGeometry geometry;
     private final ChatChannelScrollHandler scrollHandler;
@@ -63,33 +61,32 @@ public class ChatChannelMessageHandler {
     public ChatChannelMessageHandler(
             ChatChannel channel,
             ChannelsConfig config,
-            Collection<ChatChannelView.ChatLine> chatLines,
             ChatChannelDragHandler dragHandler,
             ChatChannelGeometry geometry,
             ChatChannelScrollHandler scrollHandler
     ) {
         this.channel = Objects.requireNonNull(channel, "Channel cannot be null");
         this.settings = Objects.requireNonNull(config.getChannels().get(channel.getId()), "Settings cannot be null");
-        this.chatLines = chatLines;
         this.dragHandler = dragHandler;
         this.geometry = Objects.requireNonNull(geometry, "Geometry cannot be null");
         this.scrollHandler = scrollHandler;
 
-        this.bgHex = (int) Long.decode(settings.getBackgroundColor()).longValue();
-        this.blinkHex = (int) Long.decode(settings.getBlinkColor()).longValue();
+        this.bgHex = (int) ((Number) settings.getBackgroundColor()).longValue();
+        this.blinkHex = (int) ((Number) settings.getBlinkColor()).longValue();
 
         ChatManagerCore.EVENT_BUS.register(this);
     }
 
     public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, Font renderer, boolean isChatOpen) {
-        if (settings == null || geometry == null || !settings.isVisible()) return;
+        if (!settings.isVisible()) return;
+
         this.x = geometry.getX();
         this.y = geometry.getY();
         this.viewWidth = geometry.getViewWidth();
         this.viewHeight = geometry.getViewHeight();
         this.currentY = y + viewHeight;
-        long now = System.currentTimeMillis();
-        long timeSince = now - lastMentionTime;
+
+        long timeSince = System.currentTimeMillis() - lastMentionTime;
         this.baseBg = (timeSince < settings.getBlinkDuration())
                 ? (Math.sin((double) timeSince / settings.getBlinkDuration()
                             * Math.PI * settings.getBlinkSpeed()) > 0 ? blinkHex : bgHex)
@@ -100,14 +97,16 @@ public class ChatChannelMessageHandler {
         this.renderedLinesCount = 0;
         this.hoveredStyle = null;
 
-        for (ChatChannelView.ChatLine chatLine : chatLines) {
-            MessageType type = chatLine.message().getType();
-            if (type == MessageType.ANIMATED) {
-                if (gifRender(context, renderer, mouseX, mouseY, chatLine, isChatOpen)) break;
-                else continue;
+        channel.forEachMessage(messages -> {
+            for (Message message : messages) {
+                MessageType type = message.getType();
+                if (type == MessageType.ANIMATED) {
+                    if (gifRender(context, renderer, mouseX, mouseY, message, isChatOpen)) break;
+                    else continue;
+                }
+                if (textRender(context, renderer, mouseX, mouseY, type, message, isChatOpen)) break;
             }
-            if (textRender(context, renderer, mouseX, mouseY, type, chatLine, isChatOpen)) break;
-        }
+        });
 
         if (scrollHandler != null) scrollHandler.render(context, isChatOpen);
         if (dragHandler != null) dragHandler.render(context, renderer, mouseX, mouseY, isChatOpen);
@@ -131,22 +130,22 @@ public class ChatChannelMessageHandler {
             Font renderer,
             int mouseX,
             int mouseY,
-            ChatChannelView.ChatLine chatLine,
+            Message message,
             boolean isChatOpen
     ) {
-        Matcher matcher = ChatManagerCore.GIF_PATTERN.matcher(chatLine.message().getPlainText());
+        Matcher matcher = ChatManagerCore.GIF_PATTERN.matcher(message.getFullPlain());
         if (!matcher.find()) return false;
 
         String gifId = matcher.group().replace(":", "");
         GifTexture gif = GifTexture.get(gifId);
         if (gif.isFailed()) {
-            textRender(context, renderer, mouseX, mouseY, MessageType.SYSTEM, chatLine, isChatOpen);
+            textRender(context, renderer, mouseX, mouseY, MessageType.SYSTEM, message, isChatOpen);
             return false;
         }
 
         int gifHeight = gif.getHeight() / 2;
 
-        Component cleanedContent = metrics.stripGifPattern(chatLine.message().getContent());
+        Component cleanedContent = metrics.stripGifPattern(message.getContent());
         List<FormattedCharSequence> cleanedLines = renderer.split(cleanedContent, viewWidth);
 
         int lineStep = renderer.lineHeight + 3;
@@ -165,7 +164,7 @@ public class ChatChannelMessageHandler {
 
         if (drawY + totalBlockHeight < y || (renderedLinesCount > maxVisible && !isChatOpen)) return true;
 
-        float alpha = getAlpha(isChatOpen, chatLine, fadeStartMs, fadeDurationMs);
+        float alpha = getAlpha(isChatOpen, message);
         if (alpha == -1) return true;
 
         int currentStripe = 0xFF7c6ef5;
@@ -221,26 +220,24 @@ public class ChatChannelMessageHandler {
             int mouseX,
             int mouseY,
             MessageType type,
-            ChatChannelView.ChatLine chatLine,
+            Message message,
             boolean isChatOpen
     ) {
-        List<FormattedCharSequence> lines = chatLine.texts();
+        List<FormattedCharSequence> lines = message.getSplitLines(renderer, viewWidth);
 
         int stripeColor = switch (type) {
             case PLAYER, CLIENT, CUSTOM -> 0xFFffffff;
             default -> 0xFF7c6ef5;
         };
-
         int backgroundColor = baseBg;
 
-        Map<String, Object> metadata = chatLine.message().getMetadata();
-        String lineColor = (String) metadata.get("lineColor");
-        String borderColor = (String) metadata.get("borderColor");
+        MessageMetadata meta = message.getMetadata().get(MessageMetadata.class).orElse(null);
+        if (meta != null) {
+            if (meta.getLineColor() != 0) backgroundColor = meta.getLineColor();
+            if (meta.getBorderColor() != 0) stripeColor = meta.getBorderColor();
+        }
 
-        if (lineColor != null) backgroundColor = Long.decode(lineColor).intValue();
-        if (borderColor != null) stripeColor = Long.decode(borderColor).intValue();
-
-        float alpha = getAlpha(isChatOpen, chatLine, fadeStartMs, fadeDurationMs);
+        float alpha = getAlpha(isChatOpen, message);
         if (alpha == -1) return true;
 
         int pixelOffset = (scrollHandler != null) ? (int) scrollHandler.getScrollOffset() : 0;
@@ -273,20 +270,15 @@ public class ChatChannelMessageHandler {
         return currentY + pixelOffset < y || (renderedLinesCount > maxVisible && !isChatOpen);
     }
 
-    private float getAlpha(
-            boolean isChatOpen,
-            ChatChannelView.ChatLine chatLine,
-            int fadeStartMs,
-            int fadeDurationMs
-    ) {
+    private float getAlpha(boolean isChatOpen, Message message) {
+        if (isChatOpen) return 1.0f;
+
         float alpha = 1.0f;
-        if (!isChatOpen) {
-            long age = Duration.between(chatLine.timestamp(), Instant.now()).toMillis();
-            if (age > fadeStartMs + fadeDurationMs) alpha = 0.0f;
-            else if (age > fadeStartMs) alpha = 1.0f - (float) (age - fadeStartMs) / fadeDurationMs;
-        }
-        if (!isChatOpen && alpha <= 0.118f) return -1;
-        return alpha;
+        long age = Duration.between(message.getTimestamp(), Instant.now()).toMillis();
+        if (age > fadeStartMs + fadeDurationMs) alpha = 0.0f;
+        else if (age > fadeStartMs) alpha = 1.0f - (float) (age - fadeStartMs) / fadeDurationMs;
+
+        return alpha <= 0.118f ? -1 : alpha;
     }
 
     public Style getStyleAt(double mouseX, double mouseY, Font renderer) {
@@ -299,24 +291,27 @@ public class ChatChannelMessageHandler {
 
         int lineStep = renderer.lineHeight + 3;
         int pixelOffset = (int) scrollHandler.getScrollOffset();
-        int currentY = y + viewHeight;
 
-        for (ChatChannelView.ChatLine chatLine : chatLines) {
-            for (FormattedCharSequence text : chatLine.texts()) {
-                currentY -= lineStep;
-                int drawY = currentY + pixelOffset;
+        return channel.withMessages(messages -> {
+            int currentY = y + viewHeight;
 
-                if (drawY < y - renderer.lineHeight) return null;
+            for (Message message : messages) {
+                for (FormattedCharSequence text : message.getSplitLines(renderer, viewWidth)) {
+                    currentY -= lineStep;
+                    int drawY = currentY + pixelOffset;
 
-                if (mouseY >= drawY && mouseY <= drawY + renderer.lineHeight) {
-                    ActiveTextCollector.ClickableStyleFinder finder =
-                            new ActiveTextCollector.ClickableStyleFinder(renderer, (int) mouseX, (int) mouseY);
-                    finder.accept(x, drawY, text);
-                    return finder.result();
+                    if (drawY < y - renderer.lineHeight) return null;
+
+                    if (mouseY >= drawY && mouseY <= drawY + renderer.lineHeight) {
+                        ActiveTextCollector.ClickableStyleFinder finder =
+                                new ActiveTextCollector.ClickableStyleFinder(renderer, (int) mouseX, (int) mouseY);
+                        finder.accept(x, drawY, text);
+                        return finder.result();
+                    }
                 }
             }
-        }
-        return null;
+            return null;
+        });
     }
 
     public void mouseClicked(double mouseX, double mouseY, int button) {
@@ -331,10 +326,10 @@ public class ChatChannelMessageHandler {
 
     @EventSubscriber(event = PlayerMentionedEvent.class)
     public void mentioned(PlayerMentionedEvent event) {
-        Message message = event.getMessage();
-        String messageId = message.getId();
-        boolean inChannel = channel.getMessages().stream()
-                .anyMatch(m -> m.getId().equals(messageId));
+        UUID messageId = event.getMessage().getId();
+        boolean inChannel = channel.withMessages(
+                messages -> messages.stream().anyMatch(m -> m.getId().equals(messageId))
+        );
 
         if (inChannel) {
             lastMentionTime = System.currentTimeMillis();
