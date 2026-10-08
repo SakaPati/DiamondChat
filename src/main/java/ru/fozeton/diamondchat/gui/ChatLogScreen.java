@@ -61,8 +61,10 @@ public class ChatLogScreen extends Screen {
                 20,
                 inputWidth,
                 20,
-                Component.literal("Поиск")
+                Component.empty()
         );
+        searchBox.setHint(Component.literal("Поиск"));
+
         searchBox.setOnEnter(() -> {
             this.currentSearchQuery = searchBox.getValue();
             this.historyWidget.updateCacheAsync(this.currentSearchQuery, this.currentChannelId);

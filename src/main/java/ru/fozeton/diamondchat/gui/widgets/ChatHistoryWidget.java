@@ -95,16 +95,16 @@ public class ChatHistoryWidget extends AbstractWidget {
 
                 MessageMetadata meta = message.getMetadata().get(MessageMetadata.class).orElse(null);
                 if (meta != null) {
-                    if (meta.getLineColor() != 0) backgroundColor = meta.getLineColor();
-                    if (meta.getBorderColor() != 0) baseStripe = meta.getBorderColor();
+                    if (meta.getLineColor() != null) backgroundColor = meta.getLineColor();
+                    if (meta.getBorderColor() != null) baseStripe = meta.getBorderColor();
                 }
 
                 int finalBg = message.getType() == MessageType.MENTIONED ? blinkHex : backgroundColor;
                 int finalStripe = message.getType() == MessageType.MENTIONED ? 0xFFc4a020 : baseStripe;
 
                 if (remapColors) {
-                    finalBg = colorRemapper.applyAlpha(finalBg, 128);
-                    finalStripe = colorRemapper.applyAlpha(finalStripe, 255);
+                    finalBg = colorRemapper.applyAlpha(finalBg, 0.5f);
+                    finalStripe = colorRemapper.applyAlpha(finalStripe, 1f);
                 }
 
                 newCache.add(new CachedLine(message, lines, finalBg, finalStripe, currentY, totalH));
@@ -157,7 +157,7 @@ public class ChatHistoryWidget extends AbstractWidget {
             for (FormattedCharSequence textLine : cl.lines()) {
                 graphics.fill(getX(), rowY, getX() + this.width - 15, rowY + lineH, cl.bg());
                 graphics.fill(getX(), rowY, getX() + 2, rowY + lineH, cl.stripe());
-                graphics.text(font, textLine, getX() + 3, rowY + 2, -1, false);
+                graphics.text(font, textLine, getX() + 7, rowY + 2, -1, false);
                 rowY += lineH;
             }
 

@@ -233,8 +233,8 @@ public class ChatChannelMessageHandler {
 
         MessageMetadata meta = message.getMetadata().get(MessageMetadata.class).orElse(null);
         if (meta != null) {
-            if (meta.getLineColor() != 0) backgroundColor = meta.getLineColor();
-            if (meta.getBorderColor() != 0) stripeColor = meta.getBorderColor();
+            if (meta.getLineColor() != null) backgroundColor = meta.getLineColor();
+            if (meta.getBorderColor() != null) stripeColor = meta.getBorderColor();
         }
 
         float alpha = getAlpha(isChatOpen, message);
